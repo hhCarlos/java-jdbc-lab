@@ -1,28 +1,36 @@
 # Task prompt record
 
-Author: Not provided
-Recorded at: 2026-10-17T17:28:05-06:00
+Author: Carlos Enrique
+Role: Developer
+Recorded at: 2026-10-17T17:49:05-06:00
 Redaction: None required.
 
 ## Task prompt
 
-Prepare this existing Git repository for publication to GitHub.
+Create a GitHub Actions workflow for running this project's backend tests.
 
-Follow AGENTS.md and all applicable preflight rules.
+Before making changes:
+- Follow AGENTS.md and all applicable instructions.
+- Complete Git preflight, validate the required author identity, and record this task.
+- Inspect pom.xml, the Maven Wrapper if present, test configuration, and existing workflows.
+- Run the existing tests locally and report the baseline result. If they fail, investigate and report the failure before adding the workflow.
 
-Address the ignore gaps identified in the previous review:
-- Ignore local environment-file variants while retaining .env.example.
-- Add targeted exclusions for private keys and local database backups.
-- Preserve legitimate SQL scripts, migrations, shared run configurations, and source files.
-- Check whether any sensitive or generated files are already tracked. Report findings without exposing secret values.
+Workflow requirements:
+- Store the workflow under .github/workflows/.
+- Run on pull requests targeting the repository's default branch, pushes to that branch, and manual dispatch.
+- Check out the code and configure Java 17.
+- Prefer the existing Maven Wrapper; otherwise use Maven.
+- Cache Maven dependencies.
+- Run Maven tests in non-interactive mode.
+- Ensure tests do not depend on the developer's local .env, credentials, or running containers.
+- Inspect whether tests use H2, mocks, or Oracle before deciding what CI requires. Do not silently skip tests or claim Oracle coverage from H2 tests.
+- Upload Surefire reports on test failure.
+- Use minimal workflow permissions and maintained action versions.
 
-Review the resulting diff and verify that .env.example remains tracked and local secret files remain ignored.
+The Git preflight governs your work as the coding agent. Do not execute that developer preflight inside CI, where detached HEAD and default-branch builds are expected.
 
-Do not rewrite Git history, create commits, configure a remote, or push anything.
+Keep the change focused on test automation. Do not add deployment, frontend builds, automatic commits, or pushes.
 
-Report the changes, verification results, and any remaining publication concerns.
+Validate the workflow and rerun relevant local tests after any configuration changes.
 
-## Continuation instruction
-
-you can continue
-
+Report changed files, test results, configuration assumptions, and how to check the first GitHub Actions run. Clearly distinguish local validation from an actual GitHub-hosted run.

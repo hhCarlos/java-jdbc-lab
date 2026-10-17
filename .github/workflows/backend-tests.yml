@@ -1,0 +1,45 @@
+name: Backend tests
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Java 17 and Maven cache
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      # No Maven Wrapper is checked in. Tests supply H2 databases, mocks,
+      # and temporary signing keys; no .env, secrets, or Oracle service is needed.
+      # H2 (including Oracle mode) does not establish live Oracle coverage.
+      - name: Run backend tests
+        id: tests
+        run: mvn --batch-mode --no-transfer-progress test
+
+      - name: Upload Surefire reports on test failure
+        if: ${{ failure() && steps.tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 7
