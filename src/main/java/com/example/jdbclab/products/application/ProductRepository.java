@@ -1,6 +1,7 @@
 package com.example.jdbclab.products.application;
 
 import com.example.jdbclab.products.domain.OwnedProduct;
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface ProductRepository {
@@ -10,4 +11,10 @@ public interface ProductRepository {
      * Returns an empty list when no rows match; no total count is included.
      */
     List<OwnedProduct> findByOwnerId(Long ownerUserId, long offset, int limit);
+
+    /** Inserts supplied values and returns the database record, including its generated ID.
+     * Owner and status must reference existing database rows; constraint failures propagate.
+     */
+    OwnedProduct insert(Long ownerUserId, String title, BigDecimal price, String description,
+                        long stock, String statusCode);
 }

@@ -119,4 +119,56 @@ class JdbcProductRepositoryTest {
         assertThatNullPointerException().isThrownBy(() -> repository.findByOwnerId(null, 0, 20));
         verifyNoInteractions(jdbc);
     }
+
+    @Test
+    void insertsAndReturnsGeneratedIdAndActualPersistedValues() {
+        String description = "Description with ' quotes and ? placeholders ".repeat(200);
+        var first = repository.insert(2L, "Owner's product ?", new BigDecimal("123.456"),
+                description, 9999999999L, "INACTIVE");
+        var second = repository.insert(1L, "Second", new BigDecimal("10.00"), null, 0, "ACTIVE");
+        assertThat(first.id()).isPositive();
+        assertThat(second.id()).isPositive().isNotEqualTo(first.id());
+        assertThat(first.title()).isEqualTo("Owner's product ?");
+        assertThat(first.price()).isEqualByComparingTo("123.46");
+        assertThat(first.description()).isEqualTo(description);
+        assertThat(first.stock()).isEqualTo(9999999999L);
+        assertThat(first.statusCode()).isEqualTo("INACTIVE");
+        assertThat(jdbc.queryForObject("SELECT user_id FROM products WHERE id = ?", Long.class, first.id()))
+                .isEqualTo(2L);
+        assertThat(repository.findByOwnerId(2L, 0, 20)).containsExactly(first);
+        assertThat(second.description()).isNull();
+        assertThat(second.stock()).isZero();
+        assertThat(second.statusCode()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void insertResolvesStableStatusCodeAndDoesNotInferStatusFromStock() {
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 22, "INACTIVE");
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 33, "DELETED");
+        var inactive = repository.insert(1L, "Inactive", new BigDecimal("1.00"), null, 5, "INACTIVE");
+        assertThat(jdbc.queryForObject("SELECT status_id FROM products WHERE id = ?", Long.class, inactive.id()))
+                .isEqualTo(22L);
+        var deleted = repository.insert(1L, "Deleted", new BigDecimal("2.00"), null, 0, "DELETED");
+        assertThat(deleted.statusCode()).isEqualTo("DELETED");
+        assertThat(jdbc.queryForObject("SELECT status_id FROM products WHERE id = ?", Long.class, deleted.id()))
+                .isEqualTo(33L);
+        assertThat(repository.findByOwnerId(1L, 0, 20)).containsExactly(inactive);
+    }
+
+    @Test
+    void rejectsNonexistentOwnerWithoutInsertingARow() {
+        assertThatThrownBy(() -> repository.insert(999L, "Invalid owner", new BigDecimal("1.00"), null, 0, "ACTIVE"))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isZero();
+    }
+
+    @Test
+    void rejectsUnknownStatusIncludingSqlTextWithoutInsertingARow() {
+        for (String status : new String[]{"UNKNOWN", "ACTIVE' OR '1'='1"}) {
+            assertThatThrownBy(() -> repository.insert(1L, "Invalid status", new BigDecimal("1.00"), null, 0, status))
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isZero();
+    }
+
 }
