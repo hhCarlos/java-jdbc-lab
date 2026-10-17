@@ -3,5 +3,35 @@
 *.iml
 /.vscode/
 .DS_Store
-.env
 *.log
+
+# Local environment files; keep the shared template publishable.
+.env
+.env.*
+!.env.example
+
+# Local private keys and credential containers.
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# Local database backups; SQL source and migrations remain publishable.
+/backups/
+/infra/database/backups/
+*.dump
+*.dmp
+*.sql.bak
+*.sql.backup
+*.backup.sql
+*.dump.sql
+*.sql.gz
+*.sql.bz2
+*.sql.xz
+*.sql.zst
+*.sql.zip
+/backup.sql
