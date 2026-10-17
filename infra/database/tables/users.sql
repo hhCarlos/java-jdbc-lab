@@ -1,0 +1,14 @@
+CREATE TABLE users (
+    id NUMBER GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR2(50 CHAR) NOT NULL,
+    lastname VARCHAR2(50 CHAR) NOT NULL,
+    email VARCHAR2(254 CHAR) NOT NULL,
+    password_hash VARCHAR2(512 CHAR) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT users_pk PRIMARY KEY (id),
+    CONSTRAINT users_email_uk UNIQUE (email),
+    CONSTRAINT users_name_nonblank CHECK (TRIM(name) IS NOT NULL),
+    CONSTRAINT users_lastname_nonblank CHECK (TRIM(lastname) IS NOT NULL),
+    CONSTRAINT users_password_nonblank CHECK (TRIM(password_hash) IS NOT NULL)
+);

@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run Prod" type="Application" factoryName="Application">
+    <envs>
+      <env name="DEV_DB_RESET" value="false" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="com.example.jdbclab.infrastructure.JdbcLabApplication" />
+    <module name="java-jdbc-lab" />
+    <option name="PASS_PARENT_ENVS" value="true" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=prod" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

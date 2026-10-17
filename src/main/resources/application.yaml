@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: java-jdbc-lab
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 10000
+  sql:
+    init:
+      mode: never
+  mvc:
+    problemdetails:
+      enabled: true
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+# Documentation is opt-in through the dev profile.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:}
+    issuer: ${JWT_ISSUER:java-jdbc-lab}
+    lifetime-seconds: ${JWT_TTL_SECONDS:900}

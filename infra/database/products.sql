@@ -1,0 +1,28 @@
+-- Canonical table/index DDL binds are supplied by setup.py --products-table.
+SET ECHO OFF
+SET VERIFY OFF
+SET DEFINE OFF
+SET SERVEROUTPUT ON
+WHENEVER OSERROR EXIT FAILURE
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
+DECLARE
+    found PLS_INTEGER;
+BEGIN
+    IF USER <> 'STORE_JDBC' OR SYS_CONTEXT('USERENV', 'CON_NAME') <> 'FREEPDB1' THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Expected STORE_JDBC in FREEPDB1');
+    END IF;
+    SELECT COUNT(*) INTO found FROM USER_TABLES WHERE TABLE_NAME = 'USERS';
+    IF found <> 1 THEN
+        RAISE_APPLICATION_ERROR(-20002, 'USERS must already exist');
+    END IF;
+    SELECT COUNT(*) INTO found FROM USER_TABLES WHERE TABLE_NAME = 'PRODUCTS';
+    IF found = 0 THEN
+        EXECUTE IMMEDIATE :products_ddl;
+        EXECUTE IMMEDIATE :products_index_ddl;
+        DBMS_OUTPUT.PUT_LINE('Created PRODUCTS and PRODUCTS_USER_ID_IDX.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('PRODUCTS exists; preserving structure and data. Run verification.');
+    END IF;
+END;
+/
+EXIT SUCCESS
