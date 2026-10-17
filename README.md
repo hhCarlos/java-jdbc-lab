@@ -713,3 +713,19 @@ Future write operations must enforce publication rules in the application/domain
 layer and save stock and status changes in one transaction. Restocking must not
 reactivate INACTIVE products, and DELETED products remain soft-deleted regardless of
 stock. Reactivation of INACTIVE products requires an explicit publication decision.
+
+### Current authenticated user
+
+`GET /users/me` requires `Authorization: Bearer <access-token>`. Spring Security
+validates the JWT and supplies its authenticated `Jwt` principal. The subject is
+resolved through `UserService` and `UserRepository` to the current database record.
+The response uses `UserResponse` (no password hashes or raw token claims). No user
+ID is accepted from query parameters or a request body. Missing, invalid, expired,
+or unresolvable user tokens receive a 401 problem response with a Bearer challenge.
+The dev OpenAPI specification documents the endpoint and bearer requirement.
+
+With the configured default port 8080:
+
+```sh
+curl http://localhost:8080/users/me -H "Authorization: Bearer $ACCESS_TOKEN"
+```

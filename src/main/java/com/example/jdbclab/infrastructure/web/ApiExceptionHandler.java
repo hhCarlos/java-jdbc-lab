@@ -3,6 +3,7 @@ package com.example.jdbclab.infrastructure.web;
 import com.example.jdbclab.auth.application.InvalidCredentialsException;
 import com.example.jdbclab.catalog.application.ProductNotFoundException;
 import com.example.jdbclab.users.application.EmailAlreadyExistsException;
+import com.example.jdbclab.users.application.CurrentUserUnavailableException;
 import com.example.jdbclab.users.application.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -27,6 +28,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ProductNotFoundException.class)
     public ProblemDetail handleProductNotFound(ProductNotFoundException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+    }
+
+    @ExceptionHandler(CurrentUserUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleCurrentUserUnavailable(CurrentUserUnavailableException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .body(ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage()));
     }
 
     @ExceptionHandler(UserNotFoundException.class)

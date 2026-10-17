@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import java.util.List;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +38,18 @@ public class UserController {
     @GetMapping
     public List<UserResponse> findAll() {
         return service.findAll().stream().map(UserResponse::from).toList();
+    }
+
+    @Operation(summary = "Get the current user", description = "Returns current database data for the authenticated JWT subject.")
+    @ApiResponse(responseCode = "200", description = "Current user",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer token is missing, invalid, expired, or its user no longer exists",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected failure; details are sanitized",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @GetMapping("/me")
+    public UserResponse findCurrentUser(@Parameter(hidden = true) @AuthenticationPrincipal Jwt principal) {
+        return UserResponse.from(service.findCurrentUser(principal.getSubject()));
     }
 
     @Operation(summary = "Find a user by ID")

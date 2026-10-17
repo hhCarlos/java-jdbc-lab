@@ -82,7 +82,7 @@ class UserAccessSecurityTest {
     }
 
     private void unauthorized(String authorization) throws Exception {
-        for (String path : new String[]{"/users", "/users/2"}) {
+        for (String path : new String[]{"/users", "/users/2", "/users/me"}) {
             var request = get(path);
             if (authorization != null) request.header("Authorization", authorization);
             mvc.perform(request).andExpect(status().isUnauthorized())
@@ -127,6 +127,40 @@ class UserAccessSecurityTest {
         unauthorized("Bearer " + signed(JwtClaimsSet.builder().issuer("access-test").issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(600)).build(), MacAlgorithm.HS256));
         unauthorized("Bearer " + signed(claims().notBefore(Instant.now().plusSeconds(60)).build(), MacAlgorithm.HS256));
+    }
+
+    @Test
+    void currentUserComesFromAuthenticatedIdentityAndCurrentDatabaseData() throws Exception {
+        String firstToken = tokens.issue(1L).value();
+        jdbc.update("UPDATE users SET name = ? WHERE id = ?", "Updated", 1);
+        for (int id : new int[]{1, 2}) {
+            String token = id == 1 ? firstToken : tokens.issue(2L).value();
+            mvc.perform(get("/users/me").header("Authorization", "Bearer " + token)
+                            .param("id", id == 1 ? "2" : "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(id))
+                    .andExpect(jsonPath("$.name").value(id == 1 ? "Updated" : "User"))
+                    .andExpect(jsonPath("$.email").value("user" + id + "@example.test"))
+                    .andExpect(jsonPath("$.length()").value(6))
+                    .andExpect(content().string(not(containsString("password"))))
+                    .andExpect(content().string(not(containsString("$2"))))
+                    .andExpect(jsonPath("$.sub").doesNotExist());
+        }
+    }
+
+    @Test
+    void deletedOrUnresolvableCurrentUserReturns401() throws Exception {
+        String token = tokens.issue(1L).value();
+        jdbc.update("DELETE FROM users WHERE id = ?", 1);
+        for (String value : new String[]{token, tokens.issue(999L).value(),
+                signed(claims().subject("not-an-id").build(), MacAlgorithm.HS256),
+                signed(claims().subject("9223372036854775808").build(), MacAlgorithm.HS256)}) {
+            mvc.perform(get("/users/me").header("Authorization", "Bearer " + value))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                    .andExpect(jsonPath("$.status").value(401));
+        }
     }
 
     @Test
