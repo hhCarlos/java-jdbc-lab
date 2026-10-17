@@ -1,6 +1,7 @@
 package com.example.jdbclab.infrastructure.web;
 
 import com.example.jdbclab.auth.application.InvalidCredentialsException;
+import com.example.jdbclab.catalog.application.ProductNotFoundException;
 import com.example.jdbclab.users.application.EmailAlreadyExistsException;
 import com.example.jdbclab.users.application.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    @ExceptionHandler(ProductNotFoundException.class)
+    public ProblemDetail handleProductNotFound(ProductNotFoundException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+    }
 
     @ExceptionHandler(UserNotFoundException.class)
     public ProblemDetail handleUserNotFound(UserNotFoundException exception) {

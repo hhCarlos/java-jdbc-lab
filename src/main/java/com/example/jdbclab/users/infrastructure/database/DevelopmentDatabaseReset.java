@@ -35,6 +35,10 @@ public class DevelopmentDatabaseReset implements ApplicationRunner {
                 .getContentAsString(StandardCharsets.UTF_8).strip().replaceFirst(";\\s*$", "");
         String productsDdl = new ClassPathResource("db/tables/products.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
+        String statusesDdl = new ClassPathResource("db/tables/product_statuses.sql")
+                .getContentAsString(StandardCharsets.UTF_8).strip().replaceFirst(";\\s*$", "");
+        String statusesSeed = new ClassPathResource("db/tables/product_statuses_seed.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
         try (Connection connection = dataSource.getConnection()) {
             String url = connection.getMetaData().getURL();
             if (url == null || !url.matches("(?i)jdbc:oracle:thin:@//(localhost|127\\.0\\.0\\.1|\\[::1\\]):[0-9]+/FREEPDB1")
@@ -53,7 +57,7 @@ public class DevelopmentDatabaseReset implements ApplicationRunner {
             }
             // Fixed allowlist: never enumerate/drop arbitrary tables or cascade to other objects.
             try (Statement statement = connection.createStatement()) {
-                for (String table : new String[]{"PRODUCTS", "USERS"}) {
+                for (String table : new String[]{"PRODUCTS", "PRODUCT_STATUSES", "USERS"}) {
                     try {
                         statement.execute("DROP TABLE STORE_JDBC." + table + " PURGE");
                     } catch (SQLException exception) {
@@ -63,6 +67,7 @@ public class DevelopmentDatabaseReset implements ApplicationRunner {
                     }
                 }
                 statement.execute(usersDdl);
+                statement.execute(statusesDdl);
                 for (String sql : productsDdl.split(";")) {
                     if (!sql.isBlank()) {
                         statement.execute(sql.strip());
@@ -72,6 +77,9 @@ public class DevelopmentDatabaseReset implements ApplicationRunner {
             // Oracle DDL commits implicitly; only seed DML can be rolled back.
             connection.setAutoCommit(false);
             try {
+                for (String sql : statusesSeed.split(";")) {
+                    if (!sql.isBlank()) jdbc.execute(sql.strip());
+                }
                 seed(jdbc);
                 connection.commit();
             } catch (RuntimeException | SQLException exception) {

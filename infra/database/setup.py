@@ -18,6 +18,8 @@ def main():
                       help='Create/validate USERS and run rollback-only insert checks as STORE_JDBC')
     mode.add_argument('--products-table', action='store_true',
                       help='Create PRODUCTS without changing USERS; run rollback-only checks')
+    mode.add_argument('--product-statuses', action='store_true',
+                      help='Migrate existing PRODUCTS publication statuses, preserving data')
     args = parser.parse_args()
     values = {}
     env_file = ROOT / '.env'
@@ -52,7 +54,7 @@ def main():
             raise RuntimeError('Oracle command failed; existing passwords were not changed')
         return output
 
-    if not args.verify_only and not args.users_table and not args.products_table:
+    if not args.verify_only and not args.users_table and not args.products_table and not args.product_statuses:
         prefix = ("SET ECHO OFF\nSET VERIFY OFF\nSET DEFINE OFF\n"
                   "WHENEVER SQLERROR EXIT FAILURE\n"
                   "VARIABLE setup_password VARCHAR2(128)\n"
@@ -70,14 +72,26 @@ def main():
     if 'STORE_JDBC_CONNECTION_OK' not in output:
         raise RuntimeError('Application connection was not confirmed')
     print('PASS: connected to FREEPDB1 as STORE_JDBC and executed SELECT 1 FROM DUAL.')
-    if args.users_table or args.products_table:
+    if args.users_table or args.products_table or args.product_statuses:
         connection = (
             'SET ECHO OFF\nSET VERIFY OFF\nSET DEFINE OFF\n'
             'WHENEVER OSERROR EXIT FAILURE\nWHENEVER SQLERROR EXIT FAILURE ROLLBACK\n'
             f'CONNECT store_jdbc/"{password}"@//localhost:1521/FREEPDB1\n')
-        filenames = ('products.sql', 'verify_products.sql') if args.products_table else ('users.sql', 'verify_users.sql')
+        if args.product_statuses:
+            filenames = ('product_statuses.sql', 'migrate_product_statuses.sql', 'verify_products.sql')
+        elif args.products_table:
+            filenames = ('product_statuses.sql', 'products.sql', 'verify_products.sql')
+        else:
+            filenames = ('users.sql', 'verify_users.sql')
         for filename in filenames:
             prefix = connection
+            if filename == 'product_statuses.sql':
+                ddl = Path(__file__).with_name('tables').joinpath('product_statuses.sql').read_text().strip().rstrip(';')
+                seeds = Path(__file__).with_name('tables').joinpath('product_statuses_seed.sql').read_text().split(';')
+                for bind, statement in [('statuses_ddl', ddl)] + [
+                        (f'status_seed_{i + 1}', seed.strip()) for i, seed in enumerate(seeds) if seed.strip()]:
+                    prefix += (f"VARIABLE {bind} VARCHAR2(4000)\n"
+                               f"BEGIN :{bind} := '" + statement.replace("'", "''") + "'; END;\n/\n")
             if filename == 'users.sql':
                 ddl = Path(__file__).with_name('tables').joinpath('users.sql').read_text().strip().rstrip(';')
                 prefix += ("VARIABLE users_ddl VARCHAR2(4000)\n"

@@ -29,6 +29,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/catalog/products", "/catalog/products/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users", "/users/{id}").authenticated()
                         .requestMatchers(HttpMethod.HEAD, "/users", "/users/{id}").authenticated()
                         .anyRequest().permitAll())

@@ -210,10 +210,10 @@ if needed. To deliberately rebuild and seed this project's known local tables:
 DEV_DB_RESET=true mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-This deletes existing PRODUCTS and USERS data on every startup while the flag is true. Return
+This deletes existing PRODUCTS, PRODUCT_STATUSES and USERS data on every startup while the flag is true. Return
 the flag to false for subsequent starts. The reset never drops users, schemas,
-volumes, or unrelated tables; the table allowlist contains PRODUCTS and USERS. PRODUCTS is dropped first;
-USERS is created before PRODUCTS and its nonunique owner index.
+volumes, or unrelated tables; the table allowlist contains PRODUCTS, PRODUCT_STATUSES and USERS. PRODUCTS is dropped first;
+USERS and PRODUCT_STATUSES are created before PRODUCTS and its nonunique owner index.
 It refuses non-Oracle connections, non-loopback JDBC URLs, another login/current
 schema, or a PDB other than FREEPDB1. Accepted reset URLs use the form
 `jdbc:oracle:thin:@//localhost:1521/FREEPDB1` (also 127.0.0.1 or [::1], with a numeric
@@ -221,7 +221,7 @@ port). Nonstandard Oracle URLs are intentionally refused for resets. External
 foreign keys cause the drop to fail rather than cascading to other objects.
 
 Canonical DDL lives in `infra/database/tables/users.sql` and
-`infra/database/tables/products.sql`. Maven packages both under `db/tables/`;
+`infra/database/tables/products.sql`. Maven also packages the canonical product-status lookup DDL and seed SQL under `db/tables/`;
 startup reset and the SQL*Plus setup helper read these same files.
 To add PRODUCTS while preserving existing data, run
 `python3 infra/database/setup.py --products-table` after USERS exists. No duplicate table definition is maintained. Oracle DDL commits implicitly,
@@ -698,3 +698,18 @@ database reset, account/password change, or production startup was performed.
 H2 tests do not establish live Oracle connectivity or Oracle-specific generated-key
 behavior. Mockito uses its subclass mock maker to avoid JVM agent attachment;
 change it only if future tests require mocking final/static behavior.
+
+## Product publication and catalog visibility
+
+For an existing database, run `python3 infra/database/setup.py --product-statuses`
+with application writes stopped. This preserves existing products and assigns ACTIVE
+to positive-stock products and INACTIVE to zero-stock products. New products default
+to INACTIVE. Fresh manual setup and the opt-in dev reset create the same seeded lookup.
+See [database migration details](infra/database/README.md#publication-statuses-and-existing-database-migration).
+
+Public catalog reads require ACTIVE code and stock > 0 before pagination; all other
+products return 404 by ID. Response fields and anonymous access remain unchanged.
+Future write operations must enforce publication rules in the application/domain
+layer and save stock and status changes in one transaction. Restocking must not
+reactivate INACTIVE products, and DELETED products remain soft-deleted regardless of
+stock. Reactivation of INACTIVE products requires an explicit publication decision.

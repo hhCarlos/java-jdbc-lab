@@ -14,6 +14,8 @@ public class JdbcCatalogRepository implements CatalogRepository {
     private static final RowMapper<CatalogProduct> ROW_MAPPER = (row, number) -> new CatalogProduct(
             row.getLong("id"), row.getString("title"), row.getBigDecimal("price"),
             row.getString("description"), row.getLong("stock"));
+    private static final String ACTIVE = "ACTIVE";
+    private static final String VISIBLE = "stock > 0 AND status_id IN (SELECT id FROM product_statuses WHERE code = ?)";
     private final JdbcTemplate jdbc;
 
     public JdbcCatalogRepository(JdbcTemplate jdbc) {
@@ -25,13 +27,13 @@ public class JdbcCatalogRepository implements CatalogRepository {
         if (offset < 0 || limit < 1 || limit > 100) {
             throw new IllegalArgumentException("Expected a non-negative offset and limit between 1 and 100.");
         }
-        return jdbc.query("SELECT " + COLUMNS + " FROM products ORDER BY id OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
-                ROW_MAPPER, offset, limit);
+        return jdbc.query("SELECT " + COLUMNS + " FROM products WHERE " + VISIBLE + " ORDER BY id OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
+                ROW_MAPPER, ACTIVE, offset, limit);
     }
 
     @Override
     public Optional<CatalogProduct> findById(Long id) {
-        return jdbc.query("SELECT " + COLUMNS + " FROM products WHERE id = ?", ROW_MAPPER, id)
+        return jdbc.query("SELECT " + COLUMNS + " FROM products WHERE id = ? AND " + VISIBLE, ROW_MAPPER, id, ACTIVE)
                 .stream().findFirst();
     }
 }

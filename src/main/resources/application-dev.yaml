@@ -11,5 +11,5 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
-  paths-to-match: /users, /users/**, /auth/login, /auth/register
+  paths-to-match: /users, /users/**, /auth/login, /auth/register, /catalog/products, /catalog/products/**
   override-with-generic-response: false

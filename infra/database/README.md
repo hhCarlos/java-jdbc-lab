@@ -49,9 +49,7 @@ the expected Oracle error codes. All inserted probe rows are rolled back on succ
 or failure, with a post-rollback check on success. Identity sequence values are not
 transactional: testing can leave harmless gaps in IDs. Existing rows are not modified.
 
-Live execution was attempted during implementation but Docker returned permission
-denied on its socket. SQL execution, insert checks, and rerun behavior therefore remain
-unverified against Oracle until the commands above complete successfully.
+Local Oracle setup and rollback-only verification have since completed successfully.
 
 ## PRODUCTS table
 
@@ -76,5 +74,54 @@ deletion using rollback-only probes. Identity gaps may remain after verification
 
 The opt-in development reset recreates both tables and the products index in
 foreign-key dependency order. Ordinary startup does not initialize either table.
-Live Oracle verification of PRODUCTS was attempted but Docker socket access was
-denied; the Oracle checks have not been executed in this environment.
+Local Oracle PRODUCTS verification has since completed successfully; see publication-status migration verification below.
+
+## Publication statuses and existing-database migration
+
+Stop application writes for this manual local migration, then run:
+
+```sh
+python3 infra/database/setup.py --product-statuses
+```
+
+This uses the existing SQL*Plus helper, not a new migration framework. It creates
+`product_statuses` using `tables/product_statuses.sql` and seeds the canonical
+`tables/product_statuses_seed.sql`: 1 / ACTIVE / Activo, 2 / INACTIVE / Inactivo,
+3 / DELETED / Eliminado. Conflicting fixed lookup values fail without overwriting them.
+The lookup codes are stable; catalog SQL resolves ACTIVE by code, not numeric ID.
+
+`migrate_product_statuses.sql` adds nullable status_id, backfills only unassigned
+rows (positive stock -> ACTIVE, zero stock -> INACTIVE), then makes it required,
+sets the INACTIVE default and adds a noncascading foreign key. It preserves existing
+rows and all original fields; the script compares pre/post product snapshots,
+including CLOB contents, and verifies the initial assignment. Reruns keep assigned
+statuses, including paused and deleted products; nulls from an interrupted run are
+backfilled to allow recovery. Oracle DDL commits implicitly, so this is not an atomic
+rollback migration. Run with writes stopped; snapshot memory grows with the local
+catalog. Inspect any failure before retrying.
+
+Fresh manual setup (`--users-table` then `--products-table`) creates the same lookup,
+seeds, and product structure. The opt-in destructive dev reset drops PRODUCTS first,
+then PRODUCT_STATUSES and USERS, recreates the schema in dependency order, and seeds
+the same fixed statuses. Normal startup does not migrate existing databases.
+
+Catalog listing and lookup require both ACTIVE code and stock > 0, in SQL before
+pagination. Hidden products return the existing not-found error / HTTP 404. Public
+fields, zero-based pagination, and anonymous GET access are unchanged. There is no
+total-count query or totals response in the current API; no new total is introduced.
+Any future count query must use the identical visibility predicate.
+
+Future write operations must enforce these rules in the application/domain layer:
+ACTIVE requires positive stock; INACTIVE may be explicitly reactivated; DELETED is
+soft deletion and remains DELETED regardless of stock. Positive stock and restocking
+must never automatically publish a paused or deleted product. Save stock and status
+changes in the same transaction. The database keeps stock >= 0 and the status foreign
+key; it has no cross-table publication check, triggers, or cascading deletes.
+A legacy ACTIVE/zero-stock row is defensively hidden by catalog reads.
+
+Local Oracle migration verification preserved 6 products (5 ACTIVE, 1 INACTIVE),
+checked the initial statuses against their original stock, and validated required
+status, default, foreign keys, visibility filtering, and pagination using rollback-only
+probes. Reruns also verified that existing statuses and product data were preserved. H2 tests separately
+exercise catalog visibility, pagination, hidden-product 404s, and fresh canonical DDL;
+mock-based tests cover dev-reset ordering and HTTP/security contracts.

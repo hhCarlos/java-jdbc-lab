@@ -5,6 +5,8 @@ CREATE TABLE products (
     price NUMBER(12,2) CONSTRAINT products_price_nn NOT NULL,
     description CLOB,
     stock NUMBER(10,0) DEFAULT 0 CONSTRAINT products_stock_nn NOT NULL,
+    status_id NUMBER DEFAULT 2 CONSTRAINT products_status_id_nn NOT NULL,
+    CONSTRAINT products_status_fk FOREIGN KEY (status_id) REFERENCES product_statuses (id),
     CONSTRAINT products_pk PRIMARY KEY (id),
     CONSTRAINT products_user_fk FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT products_price_nonnegative CHECK (price >= 0),

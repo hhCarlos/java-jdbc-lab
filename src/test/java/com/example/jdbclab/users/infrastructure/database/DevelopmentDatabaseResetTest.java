@@ -98,16 +98,26 @@ class DevelopmentDatabaseResetTest {
                 .getContentAsString(StandardCharsets.UTF_8).split(";");
         var order = inOrder(statement, connection);
         order.verify(statement).execute("DROP TABLE STORE_JDBC.PRODUCTS PURGE");
+        order.verify(statement).execute("DROP TABLE STORE_JDBC.PRODUCT_STATUSES PURGE");
         order.verify(statement).execute("DROP TABLE STORE_JDBC.USERS PURGE");
         order.verify(statement).execute(ddl);
+        String statusesDdl = new ClassPathResource("db/tables/product_statuses.sql")
+                .getContentAsString(StandardCharsets.UTF_8).strip().replaceFirst(";\\s*$", "");
+        String[] seeds = new ClassPathResource("db/tables/product_statuses_seed.sql")
+                .getContentAsString(StandardCharsets.UTF_8).split(";");
+        order.verify(statement).execute(statusesDdl);
         order.verify(statement).execute(productsDdl[0].strip());
         order.verify(statement).execute(productsDdl[1].strip());
         order.verify(connection).setAutoCommit(false);
+        for (String seed : seeds) {
+            if (!seed.isBlank()) order.verify(statement).execute(seed.strip());
+        }
         order.verify(connection).commit();
         var statements = ArgumentCaptor.forClass(String.class);
-        verify(statement, times(5)).execute(statements.capture());
-        assertThat(statements.getAllValues()).containsExactly("DROP TABLE STORE_JDBC.PRODUCTS PURGE", "DROP TABLE STORE_JDBC.USERS PURGE",
-                ddl, productsDdl[0].strip(), productsDdl[1].strip());
+        verify(statement, times(10)).execute(statements.capture());
+        assertThat(statements.getAllValues()).containsExactly("DROP TABLE STORE_JDBC.PRODUCTS PURGE", "DROP TABLE STORE_JDBC.PRODUCT_STATUSES PURGE", "DROP TABLE STORE_JDBC.USERS PURGE",
+                ddl, statusesDdl, productsDdl[0].strip(), productsDdl[1].strip(),
+                seeds[0].strip(), seeds[1].strip(), seeds[2].strip());
         var emails = ArgumentCaptor.forClass(String.class);
         verify(insert, times(2)).setString(eq(3), emails.capture());
         assertThat(emails.getAllValues()).containsExactly("ana@example.test", "luis@example.test");
@@ -136,7 +146,7 @@ class DevelopmentDatabaseResetTest {
         when(statement.execute("DROP TABLE STORE_JDBC.USERS PURGE"))
                 .thenThrow(new SQLException("insufficient privileges", "42000", 1031));
         assertThatThrownBy(() -> reset().run(null)).isInstanceOf(SQLException.class);
-        verify(statement, times(2)).execute(anyString());
+        verify(statement, times(3)).execute(anyString());
         verify(connection, never()).prepareStatement(anyString());
     }
 

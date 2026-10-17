@@ -50,7 +50,9 @@ class OpenApiDocumentationTest {
     void specificationDescribesBothReadEndpointsWithoutCredentials() throws Exception {
         mvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paths.*", hasSize(4)))
+                .andExpect(jsonPath("$.paths.*", hasSize(6)))
+                .andExpect(jsonPath("$.paths['/catalog/products'].get.security", hasSize(0)))
+                .andExpect(jsonPath("$.paths['/catalog/products/{id}'].get.security", hasSize(0)))
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
                 .andExpect(jsonPath("$.paths['/users'].get.security[0].bearerAuth").isArray())
