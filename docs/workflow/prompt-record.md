@@ -1,11 +1,28 @@
 # Task prompt record
 
-After successfully completing preflight, update LAST_PROMPT.md in the repository root before implementing the task.
+## Required author identity
+
+After passing preflight, read docs/workflow/author.md before starting the task or updating LAST_PROMPT.md.
+
+Both Name and Role are mandatory and must contain explicit, nonblank values. Placeholders such as "Not provided", "Unknown", or "TODO" are not valid.
+
+If the file is missing or either field is invalid:
+- Stop task execution.
+- Report the missing information and request it from the user.
+- Do not modify files or run commands that change repository contents.
+- Do not guess identity or infer it from Git metadata.
+
+Only read-only inspection needed to validate these prerequisites is allowed before author identity is established.
+
+## Record the task
+
+Once preflight and author validation succeed, update LAST_PROMPT.md in the repository root before implementing the task.
 
 Record:
-- The user-provided task prompt.
-- The author's name, only when explicitly known; otherwise "Not provided".
-- The recording timestamp in ISO 8601 format, including the timezone offset.
+- Author: the Name declared in docs/workflow/author.md.
+- Role: the Role declared in docs/workflow/author.md.
+- Recorded at: the current timestamp in ISO 8601 format, including the timezone offset.
+- Task prompt: the user-provided task instructions.
 
 Preserve the prompt's wording, except that secrets and sensitive values must be replaced with [REDACTED]. Note when redaction was necessary.
 
