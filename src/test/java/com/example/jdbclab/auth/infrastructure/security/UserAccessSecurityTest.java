@@ -131,6 +131,68 @@ class UserAccessSecurityTest {
         }
     }
 
+
+    @Test
+    void createsProductsWithTrustedOwnerAndStockDrivenStatusAndCatalogVisibility() throws Exception {
+        createProducts();
+        for (int owner : new int[]{1, 2}) {
+            for (int stock : new int[]{5, 0}) {
+                String title = "Owner " + owner + " stock " + stock;
+                String body = "{\"title\":\"" + title + "\",\"price\":49.90,\"stock\":" + stock
+                        + ",\"ownerUserId\":999,\"user_id\":999,\"status\":\"DELETED\",\"statusCode\":\"DELETED\"}";
+                var result = mvc.perform(post("/users/me/products").contentType(MediaType.APPLICATION_JSON)
+                                .header("Authorization", "Bearer " + tokens.issue((long) owner).value()).content(body))
+                        .andExpect(status().isCreated()).andExpect(jsonPath("$.id").isNumber())
+                        .andExpect(jsonPath("$.title").value(title)).andExpect(jsonPath("$.price").value(49.90))
+                        .andExpect(jsonPath("$.stock").value(stock))
+                        .andExpect(jsonPath("$.statusCode").value(stock > 0 ? "ACTIVE" : "INACTIVE"))
+                        .andExpect(jsonPath("$.length()").value(6)).andReturn();
+                Number id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+                org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                        "SELECT user_id FROM products WHERE id = ?", Long.class, id.longValue())).isEqualTo((long) owner);
+            }
+            mvc.perform(get("/users/me/products").header("Authorization", "Bearer " + tokens.issue((long) owner).value()))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].title").value("Owner " + owner + " stock 5"))
+                    .andExpect(jsonPath("$[1].title").value("Owner " + owner + " stock 0"));
+        }
+        mvc.perform(get("/catalog/products")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Owner 1 stock 5"))
+                .andExpect(jsonPath("$[1].title").value("Owner 2 stock 5"));
+    }
+
+    @Test
+    void invalidCreationInputIs400AndDoesNotInsert() throws Exception {
+        createProducts();
+        String valid = "{\"title\":\"Product\",\"price\":1.00,\"stock\":1}";
+        for (String body : new String[]{"{}", "null", "{", valid.replace("Product", " "),
+                valid.replace("Product", "x".repeat(51)), valid.replace("1.00", "-1"),
+                valid.replace("1.00", "0.001"), valid.replace("1.00", "10000000000"),
+                valid.replace("1.00", "null"), valid.replace("\"stock\":1", "\"stock\":null"),
+                valid.replace("\"stock\":1", "\"stock\":-1"),
+                valid.replace("\"stock\":1", "\"stock\":1.5"),
+                valid.replace("\"stock\":1", "\"stock\":10000000000")}) {
+            mvc.perform(post("/users/me/products").contentType(MediaType.APPLICATION_JSON)
+                            .header("Authorization", "Bearer " + tokens.issue(1L).value()).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isZero();
+    }
+
+    @Test
+    void creationRejectsMissingInvalidExpiredAndUnavailableUserTokens() throws Exception {
+        jdbc.update("DELETE FROM users WHERE id = ?", 1);
+        for (String token : new String[]{null, "not-a-jwt", tokens.issue(1L).value(), tokens.issue(999L).value(),
+                signed(claims().expiresAt(Instant.now().minusSeconds(1)).build(), MacAlgorithm.HS256)}) {
+            var request = post("/users/me/products").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"title\":\"Product\",\"price\":1.00,\"stock\":1}");
+            if (token != null) request.header("Authorization", "Bearer " + token);
+            mvc.perform(request).andExpect(status().isUnauthorized())
+                    .andExpect(header().string("WWW-Authenticate", "Bearer"));
+        }
+    }
+
     private String signed(JwtClaimsSet claims, MacAlgorithm algorithm) {
         return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSigningKey))
                 .encode(JwtEncoderParameters.from(JwsHeader.with(algorithm).build(), claims)).getTokenValue();

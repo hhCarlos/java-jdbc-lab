@@ -9,6 +9,6 @@ import org.springframework.context.annotation.Configuration;
 public class ProductConfiguration {
     @Bean
     ProductService productService(ProductRepository repository) {
-        return new ProductService(repository);
+        return new TransactionalProductService(repository);
     }
 }

@@ -28,6 +28,7 @@ public class SecurityConfiguration {
                 .logout(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/me/products").authenticated()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/catalog/products", "/catalog/products/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users", "/users/me", "/users/me/products", "/users/{id}").authenticated()

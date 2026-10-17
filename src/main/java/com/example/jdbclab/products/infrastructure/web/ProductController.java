@@ -10,6 +10,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.List;
@@ -53,4 +57,23 @@ public class ProductController {
         var currentUser = users.findCurrentUser(principal.getSubject());
         return products.findByOwnerId(currentUser.id(), page, pageSize);
     }
+
+    @Operation(summary = "Create my product", description = "Owner is the authenticated user. Positive stock creates ACTIVE status; zero stock creates INACTIVE status. Ownership and status supplied by clients are ignored.")
+    @ApiResponse(responseCode = "201", description = "Product created",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OwnedProduct.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid JSON or product input",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer token is missing, invalid, expired, or its user no longer exists",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected failure; details are sanitized",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping
+    public ResponseEntity<OwnedProduct> create(
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt principal,
+            @Valid @RequestBody CreateProductRequest request) {
+        var currentUser = users.findCurrentUser(principal.getSubject());
+        return ResponseEntity.status(201).body(products.create(currentUser.id(), request.title(),
+                request.price(), request.description(), request.stock().longValueExact()));
+    }
+
 }
