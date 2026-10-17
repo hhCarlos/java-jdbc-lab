@@ -1,0 +1,56 @@
+package com.example.jdbclab.products.infrastructure.web;
+
+import com.example.jdbclab.products.application.ProductService;
+import com.example.jdbclab.products.domain.OwnedProduct;
+import com.example.jdbclab.users.application.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import java.util.List;
+import org.springframework.http.ProblemDetail;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/users/me/products")
+@SecurityRequirement(name = "bearerAuth")
+public class ProductController {
+    private final ProductService products;
+    private final UserService users;
+
+    public ProductController(ProductService products, UserService users) {
+        this.products = products;
+        this.users = users;
+    }
+
+    @Operation(summary = "List my products", description = "Current user's non-deleted products, including inactive and zero-stock products, ordered by ID. Pages start at zero; returns an array without total counts.")
+    @ApiResponse(responseCode = "200", description = "Requested page, or an empty array",
+            content = @Content(mediaType = "application/json",
+                    array = @ArraySchema(schema = @Schema(implementation = OwnedProduct.class))))
+    @ApiResponse(responseCode = "400", description = "Invalid pagination",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer token is missing, invalid, expired, or its user no longer exists",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected failure; details are sanitized",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @GetMapping
+    public List<OwnedProduct> findMine(
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt principal,
+            @Parameter(description = "Zero-based page", example = "0")
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @Parameter(description = "Products per page (1–100)", example = "20")
+            @RequestParam(defaultValue = "20") @Min(1) @Max(ProductService.MAX_PAGE_SIZE) int pageSize) {
+        var currentUser = users.findCurrentUser(principal.getSubject());
+        return products.findByOwnerId(currentUser.id(), page, pageSize);
+    }
+}

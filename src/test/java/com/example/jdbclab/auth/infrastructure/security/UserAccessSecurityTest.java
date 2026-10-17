@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Uses real Bearer headers, the production filter chain and decoder, and isolated H2. */
 @SpringBootTest(classes = JdbcLabApplication.class, properties = {
         "spring.profiles.active=", "app.dev-db-reset=false", "auth.jwt.issuer=access-test",
-        "spring.datasource.url=jdbc:h2:mem:jwtaccess;DB_CLOSE_DELAY=-1",
+        "spring.datasource.url=jdbc:h2:mem:jwtaccess;MODE=Oracle;DB_CLOSE_DELAY=-1",
         "spring.datasource.username=sa", "spring.datasource.password=",
         "spring.datasource.driver-class-name=org.h2.Driver"})
 class UserAccessSecurityTest {
@@ -53,9 +53,11 @@ class UserAccessSecurityTest {
     private MockMvc mvc;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         mvc = MockMvcBuilders.webAppContextSetup(context)
                 .addFilters(context.getBean("springSecurityFilterChain", Filter.class)).build();
+        jdbc.execute("DROP TABLE IF EXISTS products");
+        jdbc.execute("DROP TABLE IF EXISTS product_statuses");
         jdbc.execute("DROP TABLE IF EXISTS users");
         jdbc.execute("""
                 CREATE TABLE users (
@@ -71,6 +73,64 @@ class UserAccessSecurityTest {
         }
     }
 
+    private void createProducts() throws Exception {
+        for (String file : new String[]{"product_statuses.sql", "product_statuses_seed.sql", "products.sql"}) {
+            for (String sql : java.nio.file.Files.readString(java.nio.file.Path.of("infra/database/tables/" + file)).split(";")) {
+                if (!sql.isBlank()) jdbc.execute(sql);
+            }
+        }
+    }
+
+    private void product(int owner, String title, String status, int stock) {
+        jdbc.update("INSERT INTO products (user_id, title, price, stock, status_id) VALUES (?, ?, ?, ?, (SELECT id FROM product_statuses WHERE code = ?))",
+                owner, title, new java.math.BigDecimal("12.34"), stock, status);
+    }
+
+    @Test
+    void myProductsAreScopedToPrincipalAndPaginatedAfterFiltering() throws Exception {
+        createProducts();
+        product(2, "Other", "ACTIVE", 5);
+        product(1, "Deleted", "DELETED", 5);
+        product(1, "Zero", "ACTIVE", 0);
+        product(2, "Other inactive", "INACTIVE", 0);
+        product(1, "Inactive", "INACTIVE", 0);
+        product(1, "Last", "ACTIVE", 4);
+        String header = "Bearer " + tokens.issue(1L).value();
+        mvc.perform(get("/users/me/products").header("Authorization", header)
+                        .param("ownerUserId", "2").param("pageSize", "2"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Zero"))
+                .andExpect(jsonPath("$[0].stock").value(0))
+                .andExpect(jsonPath("$[0].price").value(12.34))
+                .andExpect(jsonPath("$[1].statusCode").value("INACTIVE"))
+                .andExpect(jsonPath("$[0].length()").value(6));
+        mvc.perform(get("/users/me/products").header("Authorization", header)
+                        .param("page", "1").param("pageSize", "2"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Last"));
+        mvc.perform(get("/users/me/products").header("Authorization", "Bearer " + tokens.issue(2L).value()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Other"))
+                .andExpect(jsonPath("$[1].title").value("Other inactive"));
+        mvc.perform(get("/users/me/products").header("Authorization", header).param("page", "99"))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+    }
+
+    @Test
+    void noProductsReturnsEmptyArrayAndInvalidPaginationReturns400() throws Exception {
+        createProducts();
+        product(2, "Other", "ACTIVE", 1);
+        product(1, "Deleted", "DELETED", 0);
+        String header = "Bearer " + tokens.issue(1L).value();
+        mvc.perform(get("/users/me/products").header("Authorization", header))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+        for (String[] input : new String[][]{{"page", "-1"}, {"page", "abc"}, {"pageSize", "0"},
+                {"pageSize", "101"}, {"pageSize", "abc"}, {"page", "2147483648"}}) {
+            mvc.perform(get("/users/me/products").header("Authorization", header).param(input[0], input[1]))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
     private String signed(JwtClaimsSet claims, MacAlgorithm algorithm) {
         return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSigningKey))
                 .encode(JwtEncoderParameters.from(JwsHeader.with(algorithm).build(), claims)).getTokenValue();
@@ -82,7 +142,7 @@ class UserAccessSecurityTest {
     }
 
     private void unauthorized(String authorization) throws Exception {
-        for (String path : new String[]{"/users", "/users/2", "/users/me"}) {
+        for (String path : new String[]{"/users", "/users/2", "/users/me", "/users/me/products"}) {
             var request = get(path);
             if (authorization != null) request.header("Authorization", authorization);
             mvc.perform(request).andExpect(status().isUnauthorized())
@@ -155,6 +215,8 @@ class UserAccessSecurityTest {
         for (String value : new String[]{token, tokens.issue(999L).value(),
                 signed(claims().subject("not-an-id").build(), MacAlgorithm.HS256),
                 signed(claims().subject("9223372036854775808").build(), MacAlgorithm.HS256)}) {
+            mvc.perform(get("/users/me/products").header("Authorization", "Bearer " + value))
+                    .andExpect(status().isUnauthorized());
             mvc.perform(get("/users/me").header("Authorization", "Bearer " + value))
                     .andExpect(status().isUnauthorized())
                     .andExpect(header().string("WWW-Authenticate", "Bearer"))
