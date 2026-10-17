@@ -65,13 +65,16 @@ class ArchitectureTest {
         for (var path : sources()) {
             String source = Files.readString(path);
             String name = packageOf(source);
-            if (!name.startsWith(BASE + "users.") && !name.startsWith(BASE + "auth.")) continue;
+            if (!name.startsWith(BASE + "users.") && !name.startsWith(BASE + "auth.")
+                    && !name.startsWith(BASE + "catalog.")) continue;
             String feature = name.substring(BASE.length()).split("\\.")[0];
             var imports = IMPORT.matcher(source);
             while (imports.find()) {
                 String dependency = imports.group(1);
                 assertThat(dependency).doesNotStartWith(BASE + "infrastructure.");
-                if (feature.equals("users")) {
+                if (feature.equals("catalog")) {
+                    assertThat(dependency).doesNotStartWith(BASE + "users.").doesNotStartWith(BASE + "auth.");
+                } else if (feature.equals("users")) {
                     // Auth depends on users; prohibiting the reverse edge prevents feature cycles.
                     assertThat(dependency).doesNotStartWith(BASE + "auth.");
                 } else {
