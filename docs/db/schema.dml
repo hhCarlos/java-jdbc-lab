@@ -1,0 +1,68 @@
+// Registered users.
+// Any authenticated user can own products.
+Table users {
+  id bigint [pk, increment]
+
+  name varchar(50) [not null]
+  lastname varchar(50) [not null]
+  email varchar(254) [not null, unique]
+  password_hash varchar [not null, note: 'BCrypt hash. Never exposed by the API.']
+
+  created_at "timestamp with time zone" [not null]
+  updated_at "timestamp with time zone" [not null]
+}
+
+
+// Product publication statuses.
+// Seeded values:
+// 1 | ACTIVE   | Activo
+// 2 | INACTIVE | Inactivo
+// 3 | DELETED  | Eliminado
+Table product_statuses {
+  id bigint [pk]
+
+  code varchar [not null, unique]
+  name varchar [not null]
+}
+
+
+// Each product belongs to exactly one user.
+Table products {
+  id bigint [pk, increment]
+
+  user_id bigint [not null]
+  status_id bigint [not null, default: 2]
+
+  title varchar(50) [not null]
+  price decimal(12,2) [not null, note: 'Must be greater than or equal to zero.']
+  description clob
+  stock number(10,0) [not null, default: 0, note: 'Non-negative whole number.']
+
+  indexes {
+    user_id
+  }
+
+  Note: '''
+    Public catalog:
+    Only ACTIVE products with stock greater than zero are visible.
+
+    Owner listing:
+    Includes ACTIVE and INACTIVE products, including zero stock.
+    Excludes DELETED products.
+
+    Creation:
+    Positive stock assigns ACTIVE.
+    Zero stock assigns INACTIVE.
+    Ownership comes from the authenticated user.
+
+    Lifecycle:
+    Deleted products remain stored.
+    Restocking does not automatically reactivate a product.
+  '''
+}
+
+
+// One user can own many products.
+// One publication status can apply to many products.
+Ref: products.user_id > users.id
+Ref: products.status_id > product_statuses.id
