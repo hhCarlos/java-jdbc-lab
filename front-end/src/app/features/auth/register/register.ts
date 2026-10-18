@@ -28,12 +28,27 @@ type Field = 'name' | 'lastname' | 'email' | 'password';
 export class Register {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected submitted = false;
+  protected passwordFocused = false;
+  protected readonly passwordChecklist = [
+    { key: 'lowercase', label: 'At least one lowercase letter.' },
+    { key: 'uppercase', label: 'At least one uppercase letter.' },
+    { key: 'number', label: 'At least one number.' },
+    { key: 'special', label: 'At least one special character, excluding whitespace.' },
+  ];
   protected readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [nonBlank, Validators.maxLength(50)] }),
     lastname: new FormControl('', { nonNullable: true, validators: [nonBlank, Validators.maxLength(50)] }),
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
     password: new FormControl('', { nonNullable: true, validators: [Validators.required, passwordRequirements] }),
   });
+
+  protected get passwordDescription(): string {
+    return [
+      'register-password-hint',
+      ...(this.passwordFocused ? ['register-password-checklist'] : []),
+      ...(this.showErrors('password') ? ['register-password-errors'] : []),
+    ].join(' ');
+  }
 
   protected showErrors(field: Field): boolean {
     const control = this.form.controls[field];

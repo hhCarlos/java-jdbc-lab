@@ -23,6 +23,43 @@
   &__errors { font-size: var(--font-size-sm); }
   &__errors { color: var(--color-link); }
 
+  &__checklist {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-3);
+    list-style: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-size: var(--font-size-sm);
+  }
+
+  &__requirement {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    color: var(--color-text);
+  }
+
+  &__requirement-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 1.125em;
+    width: 1.125em;
+    height: 1.125em;
+    border-radius: var(--radius-full);
+    background: var(--color-error-indicator);
+    font-weight: var(--font-weight-bold);
+    line-height: 1;
+  }
+
+  &__requirement--satisfied &__requirement-icon {
+    background: var(--color-success-indicator);
+    color: var(--color-on-success-indicator);
+  }
+
   &__input {
     width: 100%;
     min-width: 0;

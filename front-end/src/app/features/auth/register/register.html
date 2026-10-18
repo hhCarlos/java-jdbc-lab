@@ -49,8 +49,23 @@
       <p class="register__hint" id="register-password-hint">Use at least one lowercase letter, one uppercase letter, one number, and one special character. Whitespace does not count as a special character.</p>
       <input class="register__input" id="register-password" name="password" type="password"
         formControlName="password" autocomplete="new-password" required
+        (focus)="passwordFocused = true" (blur)="passwordFocused = false"
         [attr.aria-invalid]="showErrors('password') ? 'true' : null"
-        [attr.aria-describedby]="showErrors('password') ? 'register-password-hint register-password-errors' : 'register-password-hint'" />
+        [attr.aria-describedby]="passwordDescription" />
+      @if (passwordFocused) {
+        <ul class="register__checklist" id="register-password-checklist">
+          @for (requirement of passwordChecklist; track requirement.key) {
+            <li class="register__requirement"
+              [class.register__requirement--satisfied]="!form.controls.password.hasError(requirement.key)">
+              <span class="register__requirement-icon" aria-hidden="true">{{ form.controls.password.hasError(requirement.key) ? '' : '✓' }}</span>
+              <span>
+                <span class="u-visually-hidden">{{ form.controls.password.hasError(requirement.key) ? 'Not satisfied: ' : 'Satisfied: ' }}</span>
+                {{ requirement.label }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
       @if (showErrors('password')) {
         <div class="register__errors" id="register-password-errors" aria-live="polite">
           @for (message of errors('password'); track message) {

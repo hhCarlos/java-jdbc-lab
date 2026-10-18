@@ -15,4 +15,9 @@ html[data-theme='light'] {
   --color-selection-background: hsl(0 75% 88%);
   --color-selection-text: hsl(225 15% 14%);
   --color-shadow: hsl(225 15% 14% / 0.12);
+  --color-success-indicator: hsl(110 100% 28%);
+  --color-error-indicator: hsl(0 90% 43%);
+  --color-on-success-indicator: hsl(0 0% 100%);
+  --color-success-text: hsl(110 100% 22%);
+  --color-error-text: hsl(0 90% 35%);
 }

@@ -14,4 +14,9 @@ html[data-theme='dark'] {
   --color-selection-background: hsl(0 60% 30%);
   --color-selection-text: hsl(40 20% 93%);
   --color-shadow: hsl(0 0% 0% / 0.35);
+  --color-success-indicator: hsl(110 100% 55%);
+  --color-error-indicator: hsl(0 90% 60%);
+  --color-on-success-indicator: hsl(225 15% 9%);
+  --color-success-text: hsl(110 80% 75%);
+  --color-error-text: hsl(0 90% 80%);
 }

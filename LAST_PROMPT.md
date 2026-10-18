@@ -1,39 +1,40 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:21:22-06:00
+Recorded at: 2026-10-17T18:31:33-06:00
 
 ## Task prompt
 
-Implement the registration form inside the existing Register component.
+Add a live password-requirements checklist to the existing registration form.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Use Angular reactive forms with these required fields:
-- name: label "First name".
-- lastname: label "Last name".
-- email: label "Email".
-- password: label "Password".
+Behavior:
+- Show a small inline panel below the password field while it has focus.
+- Update these requirements as the user types:
+  - At least one lowercase letter.
+  - At least one uppercase letter.
+  - At least one number.
+  - At least one special character, excluding whitespace.
+- Each requirement must have a circular bullet:
+  - Unsatisfied: red.
+  - Satisfied: bright neon green.
+- Keep the requirement text in the normal readable text color.
+- Include a checkmark for satisfied requirements and accessible satisfied/unsatisfied text so state is not communicated by color alone.
+- Hide the panel when the password field loses focus, preserving existing validation errors.
+- Reuse the form's password-validation logic and preserve the password exactly as entered.
 
-Validation:
-- First name and last name must not be blank or contain only whitespace.
-- Both names must have a maximum length of 50 characters. Support accented names, spaces, apostrophes, and hyphens.
-- Email must pass Angular's email validator.
-- Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character. Do not count whitespace as a special character.
-- Do not trim or otherwise modify the password.
-- Do not invent additional password length requirements in this phase.
+Semantic color tokens:
+- Add or reuse global status tokens for success and error in the existing theme system.
+- Use HSL notation.
+- Suggested dark-theme indicator colors:
+  - Success: hsl(110 100% 55%).
+  - Error: hsl(0 90% 60%).
+- Provide corresponding light-theme colors with sufficient contrast against the light surface, preserving the vivid green and red direction.
+- Keep indicator colors separate from readable status-text colors where necessary.
+- Use these semantic tokens in the checklist; do not hardcode colors in component styles or alter the brand-red token.
 
-UI:
-- All labels, instructions, buttons, and validation messages must be in English.
-- Explain password requirements before submission.
-- Show field errors after the field is touched or submission is attempted.
-- On invalid submission, mark fields as touched and focus the first invalid field.
-- Use accessible labels, appropriate autocomplete attributes, and associated error messages.
-- Add a "Create account" submit button.
-- Add an "Already have an account? Sign in" link to /auth/login.
-- Reuse the existing layout, theme tokens, and BEM/mobile-first styling.
+Keep all UI text in English. Follow existing BEM and mobile-first conventions, associate the checklist with the input, and keep it in normal document flow.
 
-Keep the form local for now. A valid submission must not send a request, simulate successful registration, or log the password.
+Do not add dependencies, API integration, or password-strength scoring.
 
-Do not add API services, change the backend, or implement the login form.
-
-Verify the build and add focused validation tests, especially for whitespace-only names and each password requirement. Report the results.
+Verify the build and the checklist's behavior in both themes. Report the changes and verification results.

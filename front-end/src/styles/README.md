@@ -91,3 +91,17 @@ For `src/app/shared/card/card.scss`, the relative import is
 Adjust the relative path for other component locations. Importing abstracts
 alone emits no global CSS; the application's global entry point supplies
 the custom properties.
+
+
+## Status colors
+
+Use `--color-success-indicator` and `--color-error-indicator` for graphical
+status indicators. Dark mode uses neon green `hsl(110 100% 55%)` and red
+`hsl(0 90% 60%)`. Light mode uses saturated green `hsl(110 100% 28%)` and
+red `hsl(0 90% 43%)` to maintain contrast against the light surface.
+`--color-on-success-indicator` supplies the checkmark color.
+
+Use separate `--color-success-text` and `--color-error-text` for readable
+status messages. Password checklist labels keep `--color-text`; their
+state is conveyed by circular indicator colors, a checkmark, and hidden
+satisfied/unsatisfied text. Brand primary colors are independent of status.
