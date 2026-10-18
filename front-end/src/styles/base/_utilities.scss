@@ -1,0 +1,56 @@
+// Only existing token names are generated; values remain themeable at runtime.
+$spacing-steps: 0, 1, 2, 3, 4, 6, 8, 12, 16;
+$sides: (
+  '': (''),
+  t: ('-top'),
+  r: ('-right'),
+  b: ('-bottom'),
+  l: ('-left'),
+  x: ('-left', '-right'),
+  y: ('-top', '-bottom'),
+);
+
+@each $prefix, $property in (m: margin, p: padding) {
+  @each $suffix, $directions in $sides {
+    @each $step in $spacing-steps {
+      .u-#{$prefix}#{$suffix}-#{$step} {
+        @each $direction in $directions {
+          #{$property}#{$direction}: var(--space-#{$step});
+        }
+      }
+    }
+  }
+}
+
+@each $property in (gap, row-gap, column-gap) {
+  @each $step in $spacing-steps {
+    .u-#{$property}-#{$step} {
+      #{$property}: var(--space-#{$step});
+    }
+  }
+}
+
+@each $size in (none, sm, md, lg) {
+  .u-shadow-#{$size} {
+    box-shadow: var(--shadow-#{$size});
+  }
+}
+
+@each $size in (none, sm, md, lg, full) {
+  .u-radius-#{$size} {
+    border-radius: var(--radius-#{$size});
+  }
+}
+
+// Keep content in the accessibility tree without affecting document layout.
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

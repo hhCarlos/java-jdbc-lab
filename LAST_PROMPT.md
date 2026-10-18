@@ -1,54 +1,50 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:04:54-06:00
+Recorded at: 2026-10-17T18:09:28-06:00
 
 ## Task prompt
 
-Set up the global styling foundation for the Angular application in front-end/.
+Extend the existing SCSS foundation with reusable utilities and a mobile-first breakpoint mixin.
 
-Follow AGENTS.md and all applicable task prerequisites. Keep this task limited to frontend styles.
+Follow AGENTS.md and all applicable task prerequisites. Inspect the existing style tokens and 7–1 structure before changing anything.
 
-Use SCSS with a 7–1 structure under src/styles/:
-- abstracts/
-- base/
-- components/
-- layout/
-- pages/
-- themes/
-- vendors/
+Utilities:
+- Generate margin and padding utilities, including individual sides and horizontal/vertical axes.
+- Generate gap, row-gap, and column-gap utilities.
+- Generate a small set of shadow and border-radius utilities.
+- Add a visually-hidden utility that preserves accessibility.
+- Reuse existing spacing, shadow, and radius tokens through CSS custom properties.
+- Keep class names consistent and document them.
+- Keep the generated CSS bounded: no negative spacing scale, responsive class combinations, or large utility framework.
+- Fit these utilities into the existing 7–1 structure.
 
-Keep src/styles.scss as the single global entry point. Use Sass @use and @forward rather than deprecated @import. Keep unused categories minimal; do not invent components or page styles.
+Responsive mixin:
+- Implement respond($breakpoint) using a Sass map.
+- Use these mobile-first min-width breakpoints:
+  - sm: 40em
+  - md: 48em
+  - lg: 64em
+  - xl: 80em
+- Emit a clear Sass compilation error for an unknown breakpoint.
+- Export the mixin through the abstracts entry point.
+- Keep abstracts free of emitted CSS so importing them in component styles does not duplicate global styles.
 
-Create a design-token foundation for:
-- Semantic colors.
-- Typography.
-- Spacing.
-- Border radii.
-- Shadows.
-- Z-index layers.
+Expected usage after the appropriate Sass import:
 
-Use CSS custom properties for runtime theme values and HSL color notation.
+.card {
+  padding: var(--existing-spacing-token);
 
-Visual direction:
-- Restrained, readable, editorial style.
-- Primary red inspired by O’Reilly: hsl(0 100% 41%).
-- Light background: hsl(40 25% 96%).
-- Light surface: hsl(40 20% 99%).
-- Light text: hsl(225 15% 14%).
-- Dark background: hsl(225 15% 9%).
-- Dark surface: hsl(225 12% 13%).
-- Dark text: hsl(40 20% 93%).
-- Preserve the same primary red in both themes.
-- Choose complementary muted text, borders, and interaction colors with readable contrast. Do not assume primary red is suitable for small text on every background.
+  @include respond(md) {
+    // Tablet and larger.
+  }
 
-Theme implementation:
-- Separate light and dark theme files.
-- Light is the default.
-- Support explicit selection through data-theme="light" or data-theme="dark" on the html element.
-- Components should eventually consume semantic tokens rather than hardcoded palette colors.
+  @include respond(lg) {
+    // Desktop and larger.
+  }
+}
 
-Add a minimal global reset, border-box sizing, inherited form-control typography, and base body styles. Use system fonts without external font downloads.
+Replace the illustrative token above with an actual existing token in documentation examples.
 
-Do not add pages, sample components, a theme-switching UI, UI frameworks, backend changes, or Docker changes.
+Do not add pages, components, dependencies, backend changes, or Docker changes.
 
-Verify that the Angular build succeeds. Report the structure, selected palette, and how to manually select either theme.
+Verify that the Angular build succeeds. Report utility names and provide working examples of importing and using respond(md) from an Angular component stylesheet.

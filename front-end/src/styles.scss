@@ -1,6 +1,7 @@
 @use 'styles/abstracts' as tokens;
 @use 'styles/themes';
 @use 'styles/base';
+@use 'styles/base/utilities';
 
 :root {
   @include tokens.custom-properties;
