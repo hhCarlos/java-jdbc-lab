@@ -1,4 +1,4 @@
-name: Backend tests
+name: Backend and frontend CI
 
 on:
   pull_request:
@@ -41,5 +41,44 @@ jobs:
         with:
           name: surefire-reports
           path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 7
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: front-end/
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24 and npm cache
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: front-end/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Angular's unit-test builder uses Vitest with jsdom; no browser or API service is needed.
+      - name: Run frontend tests
+        id: tests
+        run: npm test -- --watch=false --reporters=junit --reporters=default --output-file=test-results/junit.xml
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload frontend reports on test failure
+        if: ${{ failure() && steps.tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-test-reports
+          path: front-end/test-results/
           if-no-files-found: warn
           retention-days: 7
