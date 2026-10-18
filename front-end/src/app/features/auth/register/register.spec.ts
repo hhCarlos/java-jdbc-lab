@@ -6,11 +6,13 @@ import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 import { AuthService } from '../auth.service';
 import { RegistrationResponse } from '../auth.models';
+import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
 
 describe('Register', () => {
   let fixture: ComponentFixture<Register>;
   let element: HTMLElement;
   let response: Subject<RegistrationResponse>;
+  let loader: BlockingLoaderService;
   const register = vi.fn();
   const values = { name: 'María', lastname: 'Jean-Luc', email: 'person@example.com', password: ' aA1! ' };
   const publicUser: RegistrationResponse = {
@@ -25,6 +27,7 @@ describe('Register', () => {
       imports: [Register],
       providers: [provideRouter([]), { provide: AuthService, useValue: { register } }],
     }).compileComponents();
+    loader = TestBed.inject(BlockingLoaderService);
     fixture = TestBed.createComponent(Register);
     fixture.detectChanges();
     element = fixture.nativeElement;
@@ -98,23 +101,34 @@ describe('Register', () => {
   });
 
   it('marks every field touched and focuses the first invalid field on submission', () => {
+    const show = vi.spyOn(loader, 'show');
     const form = fixture.componentInstance['form'];
     form.controls.name.setValue('María');
     submit();
     expect(Object.values(form.controls).every(control => control.touched)).toBe(true);
     expect(document.activeElement).toBe(element.querySelector('#register-lastname'));
     expect(register).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
+    expect(loader.visible()).toBe(false);
   });
 
   it('submits unchanged values and prevents duplicate submissions while pending', () => {
+    const show = vi.spyOn(loader, 'show');
+    register.mockImplementation(() => {
+      expect(loader.visible()).toBe(true);
+      return response;
+    });
     fixture.componentInstance['form'].setValue(values);
     submit();
     submit();
     expect(register).toHaveBeenCalledExactlyOnceWith(values);
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(loader.visible()).toBe(true);
     expect(element.querySelector('button')?.disabled).toBe(true);
     expect(element.querySelector('button')?.textContent).toBe('Creating account...');
     expect(element.querySelector('[role="status"]')?.textContent).toBe('Creating account...');
     response.complete();
+    expect(loader.visible()).toBe(false);
     fixture.detectChanges();
     expect(element.querySelector('button')?.disabled).toBe(false);
     expect(element.querySelector('button')?.textContent).toBe('Create account');
@@ -126,6 +140,7 @@ describe('Register', () => {
     submit();
     response.next(publicUser);
     response.complete();
+    expect(loader.visible()).toBe(false);
     fixture.detectChanges();
     expect(form.getRawValue()).toEqual({ ...values, password: '' });
     expect(element.querySelector('[role="status"]')?.textContent).toContain('Your account has been created.');
@@ -146,6 +161,7 @@ describe('Register', () => {
       form.setValue(values);
       submit();
       response.error(new HttpErrorResponse({ status, error: { detail: 'private internal details' } }));
+      expect(loader.visible()).toBe(false);
       fixture.detectChanges();
       expect(element.querySelector('[role="status"]')?.textContent).toContain(message);
       expect(element.textContent).not.toContain('private internal details');
@@ -156,8 +172,10 @@ describe('Register', () => {
       register.mockReturnValue(response);
       submit();
       expect(register).toHaveBeenCalledTimes(2);
+      expect(loader.visible()).toBe(true);
       response.next(publicUser);
       response.complete();
+      expect(loader.visible()).toBe(false);
       fixture.detectChanges();
       expect(element.textContent).toContain('Your account has been created.');
     });
@@ -167,6 +185,7 @@ describe('Register', () => {
     fixture.componentInstance['form'].setValue(values);
     submit();
     response.error(new Error('private internal details'));
+    expect(loader.visible()).toBe(false);
     fixture.detectChanges();
     expect(element.querySelector('[role="status"]')?.textContent).toContain('Unable to create your account. Please try again.');
     expect(element.textContent).not.toContain('private internal details');
@@ -176,9 +195,22 @@ describe('Register', () => {
     fixture.componentInstance['form'].setValue(values);
     submit();
     expect(response.observed).toBe(true);
+    expect(loader.visible()).toBe(true);
     fixture.destroy();
+    expect(loader.visible()).toBe(false);
     expect(response.observed).toBe(false);
     expect(fixture.componentInstance['submitting']()).toBe(false);
+  });
+
+  it('releases only the registration loader handle when destroyed', () => {
+    const releaseOther = loader.show();
+    fixture.componentInstance['form'].setValue(values);
+    submit();
+    fixture.destroy();
+    expect(response.observed).toBe(false);
+    expect(loader.visible()).toBe(true);
+    releaseOther();
+    expect(loader.visible()).toBe(false);
   });
 
   for (const theme of ['light', 'dark']) {

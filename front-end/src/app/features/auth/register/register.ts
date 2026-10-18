@@ -4,8 +4,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../auth.service';
+import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 const nonBlank: ValidatorFn = control =>
   typeof control.value === 'string' && control.value.trim().length > 0
@@ -31,8 +32,10 @@ type Field = 'name' | 'lastname' | 'email' | 'password';
   styleUrl: './register.scss',
 })
 export class Register {
+  private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly auth = inject(AuthService);
+  private readonly loader = inject(BlockingLoaderService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly submitting = signal(false);
   protected readonly feedback = signal('');
@@ -92,14 +95,20 @@ export class Register {
     }
 
     this.submitting.set(true);
+    const releaseLoader = this.loader.show();
     this.auth.register(this.form.getRawValue()).pipe(
       takeUntilDestroyed(this.destroyRef),
-      finalize(() => this.submitting.set(false)),
+      finalize(() => {
+        releaseLoader();
+        this.submitting.set(false);
+      }),
     ).subscribe({
       next: () => {
         this.submitted = false;
         this.form.controls.password.reset('');
         this.feedback.set('Your account has been created. You can now sign in.');
+
+        void this.router.navigate(['/auth/login']);
       },
       error: (error: unknown) => {
         let message = 'Unable to create your account. Please try again.';
