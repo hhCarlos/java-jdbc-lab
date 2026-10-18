@@ -1,50 +1,40 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:09:28-06:00
+Recorded at: 2026-10-17T18:13:46-06:00
 
 ## Task prompt
 
-Extend the existing SCSS foundation with reusable utilities and a mobile-first breakpoint mixin.
+Create the authentication page skeletons in front-end/.
 
-Follow AGENTS.md and all applicable task prerequisites. Inspect the existing style tokens and 7–1 structure before changing anything.
+Follow AGENTS.md and all applicable task prerequisites.
 
-Utilities:
-- Generate margin and padding utilities, including individual sides and horizontal/vertical axes.
-- Generate gap, row-gap, and column-gap utilities.
-- Generate a small set of shadow and border-radius utilities.
-- Add a visually-hidden utility that preserves accessibility.
-- Reuse existing spacing, shadow, and radius tokens through CSS custom properties.
-- Keep class names consistent and document them.
-- Keep the generated CSS bounded: no negative spacing scale, responsive class combinations, or large utility framework.
-- Fit these utilities into the existing 7–1 structure.
+Create exactly three standalone Angular components within an auth feature:
 
-Responsive mixin:
-- Implement respond($breakpoint) using a Sass map.
-- Use these mobile-first min-width breakpoints:
-  - sm: 40em
-  - md: 48em
-  - lg: 64em
-  - xl: 80em
-- Emit a clear Sass compilation error for an unknown breakpoint.
-- Export the mixin through the abstracts entry point.
-- Keep abstracts free of emitted CSS so importing them in component styles does not duplicate global styles.
+- AuthLayout
+- Login
+- Register
 
-Expected usage after the appropriate Sass import:
+Routing:
 
-.card {
-  padding: var(--existing-spacing-token);
+- /auth uses AuthLayout.
+- /auth/login renders Login inside the layout.
+- /auth/register renders Register inside the layout.
+- /auth redirects to /auth/login.
+- The application root redirects to /auth/login.
 
-  @include respond(md) {
-    // Tablet and larger.
-  }
+Layout:
 
-  @include respond(lg) {
-    // Desktop and larger.
-  }
-}
+- Include a router-outlet for the child pages.
+- Center the content horizontally and vertically.
+- Use a responsive content container with mobile padding and a sensible maximum width.
+- Allow vertical scrolling when content exceeds the viewport.
+- Reuse existing design tokens, themes, and mobile-first styling conventions.
+- Use BEM naming for CSS classes.
 
-Replace the illustrative token above with an actual existing token in documentation examples.
+Keep Login and Register minimal, containing only their respective page headings.
 
-Do not add pages, components, dependencies, backend changes, or Docker changes.
+Do not add forms, authentication logic, guards, HTTP services, API integration, or additional components. Do not inspect or modify the backend.
 
-Verify that the Angular build succeeds. Report utility names and provide working examples of importing and using respond(md) from an Angular component stylesheet.
+Verify that the build succeeds and report the component structure and available routes.
+
+Follow-up instruction: you can continue

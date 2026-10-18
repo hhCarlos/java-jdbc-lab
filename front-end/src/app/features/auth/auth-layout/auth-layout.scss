@@ -1,0 +1,25 @@
+@use '../../../../styles/abstracts' as styles;
+
+:host {
+  display: block;
+}
+
+.auth-layout {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-6) var(--space-4);
+  background-color: var(--color-background);
+  color: var(--color-text);
+
+  @include styles.respond(md) {
+    padding: var(--space-12) var(--space-8);
+  }
+
+  &__content {
+    width: 100%;
+    max-width: 32rem;
+    min-width: 0;
+  }
+}
