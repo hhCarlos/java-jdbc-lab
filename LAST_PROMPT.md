@@ -1,24 +1,24 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:59:32-06:00
+Recorded at: 2026-10-17T19:06:48-06:00
 
 Task prompt:
-Configure only the Angular development proxy in front-end/.
+Add only the frontend authentication service's registration operation.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
 Requirements:
-- Route requests under /api/ to the local Spring Boot backend.
-- Remove the /api prefix before forwarding. For example, /api/auth/register must reach /auth/register on the backend.
-- Confirm the actual backend port from existing documentation or configuration using read-only inspection.
-- Use the proxy format and path matching supported by the application's Angular 21 builder.
-- Configure the existing npm start / Angular serve setup to load the proxy automatically.
-- Keep Angular page routes, including /auth and /app, outside the proxy.
-- Do not change backend routes, Spring Security, or CORS configuration.
-- Do not add HTTP services, form integration, credentials, or Docker changes.
+- Create an injectable AuthService within the existing auth feature.
+- Configure Angular HttpClient if it is not already provided.
+- Implement register() using POST /api/auth/register through the existing development proxy.
+- Define a typed request containing name, lastname, email, and password.
+- Inspect the existing backend registration response contract using read-only access and define the matching response type. Do not assume it returns a JWT.
+- Return a typed Observable without subscribing inside the service.
+- Preserve HTTP errors for the consuming component to handle.
+- Do not log credentials or modify the password.
 
-Document the local startup commands and explain that the backend must be running separately.
+Keep this change limited to the service, necessary types, and HttpClient configuration. Do not connect the form, add navigation, store tokens, implement login, or modify the backend.
 
-Verify that the frontend builds and starts with the proxy configuration. If the backend is available, verify forwarding with a harmless read-only request to an existing public endpoint. Otherwise, state that end-to-end forwarding remains unverified.
+Add focused HTTP tests verifying the request method, URL, body, response handling, and error propagation. Use mocked HTTP requests without creating real accounts.
 
-Report changed files, the proxy target, and an example mapping from a frontend URL to the corresponding backend URL.
+Verify the frontend build, run the relevant tests, and report the results and confirmed API response contract.
