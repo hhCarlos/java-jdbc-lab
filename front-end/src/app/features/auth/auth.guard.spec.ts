@@ -45,13 +45,34 @@ describe('Application route protection and logout', () => {
       expect(session.getAccessToken()).toBeNull();
     } finally { now.mockRestore(); }
   });
+  it('preserves sidebar navigation, active links, and accessibility', async () => {
+    session.establish({ accessToken: 'test-token', tokenType: 'Bearer', expiresIn: 900 });
+    await harness.navigateByUrl('/app/products');
+    const sidebar = harness.routeNativeElement!.querySelector('app-sidebar')!;
+    expect(sidebar.querySelector('nav')!.getAttribute('aria-label')).toBe('Main navigation');
+    expect(sidebar.querySelector('.app-sidebar__logo')!.getAttribute('aria-hidden')).toBe('true');
+    const links = sidebar.querySelectorAll<HTMLAnchorElement>('a');
+    expect(links[0].getAttribute('href')).toBe('/app/products');
+    expect(links[1].getAttribute('href')).toBe('/app/profile');
+    expect(links[0].classList.contains('app-sidebar__link--active')).toBe(true);
+    expect(links[0].getAttribute('aria-current')).toBe('page');
+    expect(links[1].getAttribute('aria-current')).toBeNull();
+    links[1].click();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(router.url).toBe('/app/profile');
+    expect(links[0].classList.contains('app-sidebar__link--active')).toBe(false);
+    expect(links[0].getAttribute('aria-current')).toBeNull();
+    expect(links[1].classList.contains('app-sidebar__link--active')).toBe(true);
+    expect(links[1].getAttribute('aria-current')).toBe('page');
+  });
   it('logs out with replaceUrl and rejects Back navigation to an earlier protected page', async () => {
     session.establish({ accessToken: 'test-token', tokenType: 'Bearer', expiresIn: 900 });
     await harness.navigateByUrl('/app/products');
     await harness.navigateByUrl('/app/profile');
     const navigate = vi.spyOn(router, 'navigate');
-    const button = harness.routeNativeElement!.querySelector<HTMLButtonElement>('nav button')!;
-    expect(button.textContent).toBe('cerrar sesion');
+    const button = harness.routeNativeElement!.querySelector<HTMLButtonElement>('app-sidebar nav button')!;
+    expect(button.textContent).toBe('Cerrar sesion');
     expect(button.type).toBe('button');
     button.click();
     await harness.fixture.whenStable();

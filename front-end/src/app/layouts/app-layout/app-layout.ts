@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
+import { AppSidebar } from '../app-sidebar/app-sidebar';
 import { SessionService } from '../../features/auth/session.service';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [AppSidebar, RouterOutlet],
   templateUrl: './app-layout.html',
   styleUrl: './app-layout.scss',
 })
