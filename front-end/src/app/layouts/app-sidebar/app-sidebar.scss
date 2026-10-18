@@ -25,7 +25,9 @@
   }
 
   &__link {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
     border-left: var(--space-1) solid transparent;
     color: var(--color-text);

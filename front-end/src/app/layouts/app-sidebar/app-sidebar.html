@@ -2,9 +2,18 @@
   <div class="app-sidebar__logo" aria-hidden="true"></div>
   <nav class="app-sidebar__nav" aria-label="Main navigation">
     <a class="app-sidebar__link" routerLink="/app/products"
-      routerLinkActive="app-sidebar__link--active" ariaCurrentWhenActive="page">Products</a>
+      routerLinkActive="app-sidebar__link--active" ariaCurrentWhenActive="page">
+      <app-icon name="products" />
+      <span>Products</span>
+    </a>
     <a class="app-sidebar__link" routerLink="/app/profile"
-      routerLinkActive="app-sidebar__link--active" ariaCurrentWhenActive="page">My Profile</a>
-    <button class="app-sidebar__link app-sidebar__logout" type="button" (click)="logoutRequested.emit()">Cerrar sesion</button>
+      routerLinkActive="app-sidebar__link--active" ariaCurrentWhenActive="page">
+      <app-icon name="profile" />
+      <span>My Profile</span>
+    </a>
+    <button class="app-sidebar__link app-sidebar__logout" type="button" (click)="logoutRequested.emit()">
+      <app-icon name="logout" />
+      <span>Cerrar sesion</span>
+    </button>
   </nav>
 </aside>
