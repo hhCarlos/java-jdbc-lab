@@ -1,0 +1,46 @@
+<div class="app-table__wrapper">
+  <table class="app-table">
+    <thead class="app-table__head">
+      <tr>
+        @for (column of columns(); track column.key) {
+          <th class="app-table__header" scope="col">{{ column.header }}</th>
+        }
+        @if (actionsTemplate()) {
+          <th class="app-table__header" scope="col">Actions</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row[rowKey()]) {
+        <tr class="app-table__row">
+          @for (column of columns(); track column.key) {
+            <td class="app-table__cell">
+              @if (column.cellTemplate; as cellTemplate) {
+                <ng-container
+                  [ngTemplateOutlet]="cellTemplate"
+                  [ngTemplateOutletContext]="{ $implicit: row }"
+                />
+              } @else {
+                {{ row[column.key] ?? '—' }}
+              }
+            </td>
+          }
+          @if (actionsTemplate(); as actions) {
+            <td class="app-table__cell app-table__actions">
+              <ng-container
+                [ngTemplateOutlet]="actions"
+                [ngTemplateOutletContext]="{ $implicit: row }"
+              />
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td class="app-table__cell app-table__empty" [attr.colspan]="visibleColumnCount()">
+            {{ emptyMessage() }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
