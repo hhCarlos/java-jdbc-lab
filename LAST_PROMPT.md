@@ -1,39 +1,27 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T17:21:58-06:00
+Recorded at: 2026-10-18T17:26:58-06:00
 
 Task prompt:
 
-Create a minimal reusable standalone AppTable component in the frontend shared component structure, following the supplied wireframe.
+Implement the frontend products service for listing the authenticated user's products.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Component API:
-- Accept a typed collection of rows.
-- Accept typed column definitions containing a property key and a header label.
-- Property keys must correspond to fields of the row type.
-- Accept a rowKey identifying the property used to track rows.
-- Accept an optional actionsTemplate receiving the current row as its implicit context.
-- Support an optional cell template per column for custom formatting, also receiving the current row.
-- Default cells display the corresponding property value as text.
-- Preserve zero and false values. Display a neutral placeholder for null or undefined.
-- Avoid any, innerHTML, and product-specific logic.
+First, inspect the products feature. Reuse or complete ProductsService if it already exists rather than creating a duplicate.
 
-Rendering:
-- Use a semantic HTML table with thead, tbody, and column-header scopes.
-- Render an additional "Actions" column only when an actions template is supplied.
-- Action buttons and their handlers belong to the consuming page's template.
-- Show a configurable empty-state message spanning all visible columns.
-- Use a horizontally scrollable wrapper on narrow screens.
-- Reuse theme tokens, typography, spacing, and BEM conventions.
-- Treat the sketch as a structural reference; use a clean header and aligned rows rather than separate oversized cards for every cell.
+Requirements:
+- Use HttpClient to call GET /api/users/me/products through the existing proxy.
+- Inspect the backend endpoint and response models using read-only access to confirm the actual contract.
+- Define or reuse typed product and pagination models.
+- Accept pagination parameters, validate their supported ranges, and build the query using HttpParams.
+- Return a typed Observable without subscribing inside the service.
+- Preserve HTTP errors for the caller.
+- Rely on the existing interceptor for authentication.
+- Do not accept an owner user ID or duplicate backend visibility filtering.
 
-Keep the table presentational. Do not add HTTP calls, pagination, sorting, filtering, selection, or editing logic.
+Keep this task limited to the service and necessary models. Do not modify the Products page, shared table, loader, backend, or implement creation/update/delete operations.
 
-Document a usage example with ID, Title, Price, Stock, and an actions template. Demonstrate custom price formatting without hardcoding a currency inside the shared component.
+Add focused HTTP tests for the request URL, pagination, response mapping where applicable, empty results, and error propagation. Mock all requests.
 
-Do not connect the Products page yet or modify the backend.
-
-Add focused tests for column mapping, zero values, empty state, custom cell rendering, and actions receiving the correct row.
-
-Run relevant tests and the Angular build. Report the public API and verification results.
+Run the relevant tests and Angular build. Report results, the confirmed API contract, and example service usage.
