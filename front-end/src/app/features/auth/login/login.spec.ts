@@ -1,13 +1,28 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { vi } from 'vitest';
+import { AuthService } from '../auth.service';
+import { LoginResponse } from '../auth.models';
+import { SessionService } from '../session.service';
+import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
 import { Login } from './login';
 
 describe('Login', () => {
   let fixture: ComponentFixture<Login>;
   let element: HTMLElement;
+  let response: Subject<LoginResponse>;
+  let login: ReturnType<typeof vi.fn>;
+  let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [Login], providers: [provideRouter([])] }).compileComponents();
+    response = new Subject<LoginResponse>();
+    login = vi.fn(() => response);
+    await TestBed.configureTestingModule({ imports: [Login], providers: [
+      provideRouter([]), { provide: AuthService, useValue: { login } },
+    ] }).compileComponents();
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(Login);
     fixture.detectChanges();
     element = fixture.nativeElement;
@@ -59,17 +74,74 @@ describe('Login', () => {
     expect(document.activeElement).toBe(element.querySelector('#login-password'));
   });
 
-  it('keeps valid credentials local and provides the expected autocomplete and registration link', () => {
+  it('submits unchanged credentials and preserves autocomplete and registration link', () => {
     const form = fixture.componentInstance['form'];
     const values = { email: 'person@example.com', password: ' password ' };
     form.setValue(values);
     submit();
     expect(form.valid).toBe(true);
     expect(form.getRawValue()).toEqual(values);
+    expect(login).toHaveBeenCalledWith(values);
     expect(element.querySelector('.login__errors')).toBeNull();
     expect(element.querySelector('#login-email')?.getAttribute('autocomplete')).toBe('username');
     expect(element.querySelector('#login-password')?.getAttribute('autocomplete')).toBe('current-password');
     expect(element.querySelector('a')?.getAttribute('href')).toBe('/auth/register');
     expect(element.querySelector('button')?.textContent).toBe('Sign in');
+  });
+
+  it('does not submit invalid forms or show the loader', () => {
+    submit();
+    expect(login).not.toHaveBeenCalled();
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+  });
+
+  function submitValid() {
+    fixture.componentInstance['form'].setValue({ email: 'person@example.test', password: ' password ' });
+    submit();
+  }
+
+  it('establishes the session, clears the password, navigates and releases the loader', () => {
+    submitValid();
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(true);
+    expect(element.querySelector('button')?.disabled).toBe(true);
+    response.next({ accessToken: 'test-token', tokenType: 'Bearer', expiresIn: 900 });
+    response.complete();
+    expect(TestBed.inject(SessionService).getAccessToken()).toBe('test-token');
+    expect(fixture.componentInstance['form'].controls.password.value).toBe('');
+    expect(navigate).toHaveBeenCalledWith(['/app/products']);
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+  });
+
+  for (const [status, message] of [
+    [401, 'Invalid email or password. Please try again.'],
+    [0, 'Unable to connect to the server. Check your connection and try again.'],
+    [500, 'Unable to sign in. Please try again.'],
+  ] as const) {
+    it(`shows accessible feedback for ${status}, stays on the page, and releases the loader`, () => {
+      submitValid();
+      response.error(new HttpErrorResponse({ status }));
+      fixture.detectChanges();
+      expect(element.querySelector('[role="alert"]')?.textContent).toContain(message);
+      expect(navigate).not.toHaveBeenCalled();
+      expect(TestBed.inject(SessionService).isAuthenticated()).toBe(false);
+      expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+      expect(fixture.componentInstance['submitting']()).toBe(false);
+    });
+  }
+
+  it('prevents duplicate submissions while pending', () => {
+    submitValid();
+    submit();
+    expect(login).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels and releases the loader on destruction', () => {
+    submitValid();
+    fixture.destroy();
+    expect(response.observed).toBe(false);
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

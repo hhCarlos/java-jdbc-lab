@@ -1,35 +1,41 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T14:35:36-06:00
+Recorded at: 2026-10-18T14:41:50-06:00
 
 Task prompt:
 
-Extend the existing frontend authentication service with login and add in-memory session state.
+Connect the existing login form to authentication and add a bearer-token HTTP interceptor.
 
-Follow AGENTS.md and all applicable task prerequisites.
+Follow AGENTS.md and all applicable task prerequisites. Reuse the existing AuthService, session service, and global loader.
 
-Login:
-- Inspect the existing backend login endpoint and response models using read-only access.
-- Add login() to the existing AuthService, preserving register().
-- POST email and password to /api/auth/login through the existing proxy.
-- Define request and response types matching the actual API contract.
-- Return a typed Observable without subscribing inside the service.
-- Preserve HTTP errors for the caller to handle.
-- Do not trim, transform, or log the password.
+Login form:
+- Submit email and password only when the form is valid.
+- Preserve the password exactly as entered.
+- Prevent duplicate submissions and show the existing blocking loader while the request is pending.
+- On success, establish the session using the existing session-service API, clear the password, and navigate to /app/products.
+- Handle invalid credentials, connection failures, and unexpected errors with accessible English messages.
+- Keep the user on the login page when authentication fails.
+- Always release the loader and reset submission state on success, error, or cancellation. Use finalize and the existing subscription-cleanup conventions.
+- Preserve the current validation, layout, and styling.
 
-Session state:
-- Create a small injectable session service using Angular signals.
-- Provide an explicit operation to establish a session from the successful login response.
-- Keep the access token in memory only. Reloading the application requires login again.
-- Expose read-only authentication state and controlled access to the current token for future API requests.
-- Provide an operation to clear all session state.
-- Use expiration information if the backend supplies it; do not invent response fields or treat an expired token as authenticated.
-- Do not infer user profile information that the response does not provide.
-- Do not use localStorage, sessionStorage, cookies, or refresh tokens.
-- Keep login() responsible for HTTP; the consuming component will explicitly establish the session later.
+HTTP interceptor:
+- Implement a functional Angular interceptor and register it through the existing HttpClient configuration.
+- Obtain the current usable token from the session service.
+- Attach Authorization: Bearer <token> only to requests targeting this application's API.
+- Match API paths precisely; do not attach credentials to external URLs.
+- Exclude login and registration requests.
+- Leave requests unchanged when there is no usable token.
+- Preserve existing headers and interceptor configuration.
+- Never log tokens or credentials.
 
-Do not connect the login form, add navigation, guards, interceptors, loader integration, or backend changes.
+Do not add route guards, logout UI, automatic redirects on API errors, refresh tokens, persistent storage, or backend changes.
 
-Add focused tests covering the login request and response, error propagation, session establishment, clearing, and expiration behavior where applicable. Mock HTTP requests rather than using real credentials.
+Add focused tests covering:
+- Successful login establishes the session and navigates.
+- Invalid forms do not submit.
+- Authentication errors preserve the page and display feedback.
+- Duplicate submissions are prevented.
+- Loader cleanup occurs on success, error, and cancellation.
+- The interceptor attaches the token to eligible API requests and excludes authentication requests, external URLs, and requests without a usable token.
 
-Run the relevant tests and Angular build. Report results, the confirmed login response contract, and the public session-service API.
+Run the relevant tests and Angular build. Report results and manual verification steps.

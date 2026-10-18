@@ -1,7 +1,7 @@
 <section class="login" aria-labelledby="login-heading">
   <h1 class="login__heading" id="login-heading">Login</h1>
   <p class="login__instructions">All fields are required.</p>
-  <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="submitting()" novalidate>
     <div class="login__field">
       <label class="login__label" for="login-email">Email</label>
       <input class="login__input" id="login-email" name="email" type="email"
@@ -22,7 +22,10 @@
         <p class="login__errors" id="login-password-errors" aria-live="polite">{{ error('password') }}</p>
       }
     </div>
-    <button class="login__submit" type="submit">Sign in</button>
+    @if (feedback()) {
+      <p class="login__errors" role="alert">{{ feedback() }}</p>
+    }
+    <button class="login__submit" type="submit" [disabled]="submitting()">Sign in</button>
   </form>
   <p class="login__signup">Don't have an account? <a routerLink="/auth/register">Create one</a></p>
 </section>
