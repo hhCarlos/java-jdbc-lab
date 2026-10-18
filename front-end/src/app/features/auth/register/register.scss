@@ -1,27 +1,15 @@
-@use '../../../../styles/abstracts' as styles;
+@use '../styles/form' as form;
 
 :host { display: block; }
 
 .register {
-  &__instructions,
-  &__hint { color: var(--color-text-muted); }
+  @include form.fields;
 
-  &__instructions,
-  &__form,
   &__signin { margin-top: var(--space-4); }
-
-  &__form,
-  &__field {
-    display: grid;
-    gap: var(--space-2);
+  &__hint {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
   }
-
-  &__form { gap: var(--space-6); }
-  &__label { font-weight: var(--font-weight-medium); }
-
-  &__hint,
-  &__errors { font-size: var(--font-size-sm); }
-  &__errors { color: var(--color-link); }
 
   &__checklist {
     display: grid;
@@ -60,33 +48,4 @@
     color: var(--color-on-success-indicator);
   }
 
-  &__input {
-    width: 100%;
-    min-width: 0;
-    padding: var(--space-3);
-    border: 1px solid var(--color-border-strong);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    color: var(--color-text);
-
-    &[aria-invalid='true'] { border-color: var(--color-link); }
-  }
-
-  &__submit {
-    min-height: 2.75rem;
-    padding: var(--space-3) var(--space-4);
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: var(--color-primary);
-    color: var(--color-on-primary);
-    font-weight: var(--font-weight-bold);
-    cursor: pointer;
-
-    &:hover { background: var(--color-action-hover); }
-    &:active { background: var(--color-action-active); }
-  }
-
-  @include styles.respond(md) {
-    &__form { margin-top: var(--space-6); }
-  }
 }

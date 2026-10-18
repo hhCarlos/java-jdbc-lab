@@ -1,0 +1,9 @@
+@use '../styles/form' as form;
+
+:host { display: block; }
+
+.login {
+  @include form.fields;
+
+  &__signup { margin-top: var(--space-4); }
+}

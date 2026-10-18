@@ -1,1 +1,28 @@
-<h1 class="login__heading">Login</h1>
+<section class="login" aria-labelledby="login-heading">
+  <h1 class="login__heading" id="login-heading">Login</h1>
+  <p class="login__instructions">All fields are required.</p>
+  <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="login__field">
+      <label class="login__label" for="login-email">Email</label>
+      <input class="login__input" id="login-email" name="email" type="email"
+        formControlName="email" autocomplete="username" required
+        [attr.aria-invalid]="showErrors('email') ? 'true' : null"
+        [attr.aria-describedby]="showErrors('email') ? 'login-email-errors' : null" />
+      @if (showErrors('email')) {
+        <p class="login__errors" id="login-email-errors" aria-live="polite">{{ error('email') }}</p>
+      }
+    </div>
+    <div class="login__field">
+      <label class="login__label" for="login-password">Password</label>
+      <input class="login__input" id="login-password" name="password" type="password"
+        formControlName="password" autocomplete="current-password" required
+        [attr.aria-invalid]="showErrors('password') ? 'true' : null"
+        [attr.aria-describedby]="showErrors('password') ? 'login-password-errors' : null" />
+      @if (showErrors('password')) {
+        <p class="login__errors" id="login-password-errors" aria-live="polite">{{ error('password') }}</p>
+      }
+    </div>
+    <button class="login__submit" type="submit">Sign in</button>
+  </form>
+  <p class="login__signup">Don't have an account? <a routerLink="/auth/register">Create one</a></p>
+</section>

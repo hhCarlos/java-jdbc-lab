@@ -1,40 +1,26 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:31:33-06:00
+Recorded at: 2026-10-17T18:37:42-06:00
 
 ## Task prompt
 
-Add a live password-requirements checklist to the existing registration form.
+Implement the login form inside the existing Login component.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Behavior:
-- Show a small inline panel below the password field while it has focus.
-- Update these requirements as the user types:
-  - At least one lowercase letter.
-  - At least one uppercase letter.
-  - At least one number.
-  - At least one special character, excluding whitespace.
-- Each requirement must have a circular bullet:
-  - Unsatisfied: red.
-  - Satisfied: bright neon green.
-- Keep the requirement text in the normal readable text color.
-- Include a checkmark for satisfied requirements and accessible satisfied/unsatisfied text so state is not communicated by color alone.
-- Hide the panel when the password field loses focus, preserving existing validation errors.
-- Reuse the form's password-validation logic and preserve the password exactly as entered.
+Use Angular reactive forms with:
+- Email: required, using Angular's email validator.
+- Password: required. Do not apply registration complexity rules or trim the password.
 
-Semantic color tokens:
-- Add or reuse global status tokens for success and error in the existing theme system.
-- Use HSL notation.
-- Suggested dark-theme indicator colors:
-  - Success: hsl(110 100% 55%).
-  - Error: hsl(0 90% 60%).
-- Provide corresponding light-theme colors with sufficient contrast against the light surface, preserving the vivid green and red direction.
-- Keep indicator colors separate from readable status-text colors where necessary.
-- Use these semantic tokens in the checklist; do not hardcode colors in component styles or alter the brand-red token.
+UI:
+- Keep all text in English.
+- Use accessible labels and autocomplete="username" for email and autocomplete="current-password" for password.
+- Show validation errors after a field is touched or submission is attempted.
+- On invalid submission, mark fields as touched and focus the first invalid field.
+- Add a "Sign in" submit button.
+- Add a "Don't have an account? Create one" link to /auth/register.
+- Reuse the existing AuthLayout, form styling, semantic tokens, and BEM/mobile-first conventions.
 
-Keep all UI text in English. Follow existing BEM and mobile-first conventions, associate the checklist with the input, and keep it in normal document flow.
+Keep this phase local: do not send HTTP requests, simulate successful login, log credentials, or add authentication services or guards.
 
-Do not add dependencies, API integration, or password-strength scoring.
-
-Verify the build and the checklist's behavior in both themes. Report the changes and verification results.
+Verify that the Angular build succeeds and report the changes.
