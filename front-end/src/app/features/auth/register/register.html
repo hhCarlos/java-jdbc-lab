@@ -1,1 +1,65 @@
-<h1 class="register__heading">Register</h1>
+<section class="register" aria-labelledby="register-heading">
+  <h1 class="register__heading" id="register-heading">Register</h1>
+  <p class="register__instructions">All fields are required.</p>
+  <form class="register__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="register__field">
+      <label class="register__label" for="register-name">First name</label>
+      <input class="register__input" id="register-name" name="name" type="text"
+        formControlName="name" autocomplete="given-name" required
+        [attr.aria-invalid]="showErrors('name') ? 'true' : null"
+        [attr.aria-describedby]="showErrors('name') ? 'register-name-errors' : null" />
+      @if (showErrors('name')) {
+        <div class="register__errors" id="register-name-errors" aria-live="polite">
+          @for (message of errors('name'); track message) {
+            <p>{{ message }}</p>
+          }
+        </div>
+      }
+    </div>
+    <div class="register__field">
+      <label class="register__label" for="register-lastname">Last name</label>
+      <input class="register__input" id="register-lastname" name="lastname" type="text"
+        formControlName="lastname" autocomplete="family-name" required
+        [attr.aria-invalid]="showErrors('lastname') ? 'true' : null"
+        [attr.aria-describedby]="showErrors('lastname') ? 'register-lastname-errors' : null" />
+      @if (showErrors('lastname')) {
+        <div class="register__errors" id="register-lastname-errors" aria-live="polite">
+          @for (message of errors('lastname'); track message) {
+            <p>{{ message }}</p>
+          }
+        </div>
+      }
+    </div>
+    <div class="register__field">
+      <label class="register__label" for="register-email">Email</label>
+      <input class="register__input" id="register-email" name="email" type="email"
+        formControlName="email" autocomplete="email" required
+        [attr.aria-invalid]="showErrors('email') ? 'true' : null"
+        [attr.aria-describedby]="showErrors('email') ? 'register-email-errors' : null" />
+      @if (showErrors('email')) {
+        <div class="register__errors" id="register-email-errors" aria-live="polite">
+          @for (message of errors('email'); track message) {
+            <p>{{ message }}</p>
+          }
+        </div>
+      }
+    </div>
+    <div class="register__field">
+      <label class="register__label" for="register-password">Password</label>
+      <p class="register__hint" id="register-password-hint">Use at least one lowercase letter, one uppercase letter, one number, and one special character. Whitespace does not count as a special character.</p>
+      <input class="register__input" id="register-password" name="password" type="password"
+        formControlName="password" autocomplete="new-password" required
+        [attr.aria-invalid]="showErrors('password') ? 'true' : null"
+        [attr.aria-describedby]="showErrors('password') ? 'register-password-hint register-password-errors' : 'register-password-hint'" />
+      @if (showErrors('password')) {
+        <div class="register__errors" id="register-password-errors" aria-live="polite">
+          @for (message of errors('password'); track message) {
+            <p>{{ message }}</p>
+          }
+        </div>
+      }
+    </div>
+    <button class="register__submit" type="submit">Create account</button>
+  </form>
+  <p class="register__signin">Already have an account? <a routerLink="/auth/login">Sign in</a></p>
+</section>

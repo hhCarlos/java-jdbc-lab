@@ -3,19 +3,23 @@
   --color-primary: hsl(0 100% 41%);
   --color-on-primary: hsl(0 0% 100%);
 
-  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Aptos", "Calibri", "Segoe UI", "Helvetica Neue",
+    Arial, sans-serif;
   --font-editorial: Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.25rem;
   --font-size-xl: 1.5rem;
   --font-size-2xl: 2rem;
   --font-size-3xl: 2.5rem;
+
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-bold: 700;
-  --line-height-body: 1.6;
+
+  --line-height-body: 1.5;
   --line-height-heading: 1.2;
   --measure-reading: 65ch;
 

@@ -1,40 +1,39 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:13:46-06:00
+Recorded at: 2026-10-17T18:21:22-06:00
 
 ## Task prompt
 
-Create the authentication page skeletons in front-end/.
+Implement the registration form inside the existing Register component.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Create exactly three standalone Angular components within an auth feature:
+Use Angular reactive forms with these required fields:
+- name: label "First name".
+- lastname: label "Last name".
+- email: label "Email".
+- password: label "Password".
 
-- AuthLayout
-- Login
-- Register
+Validation:
+- First name and last name must not be blank or contain only whitespace.
+- Both names must have a maximum length of 50 characters. Support accented names, spaces, apostrophes, and hyphens.
+- Email must pass Angular's email validator.
+- Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character. Do not count whitespace as a special character.
+- Do not trim or otherwise modify the password.
+- Do not invent additional password length requirements in this phase.
 
-Routing:
+UI:
+- All labels, instructions, buttons, and validation messages must be in English.
+- Explain password requirements before submission.
+- Show field errors after the field is touched or submission is attempted.
+- On invalid submission, mark fields as touched and focus the first invalid field.
+- Use accessible labels, appropriate autocomplete attributes, and associated error messages.
+- Add a "Create account" submit button.
+- Add an "Already have an account? Sign in" link to /auth/login.
+- Reuse the existing layout, theme tokens, and BEM/mobile-first styling.
 
-- /auth uses AuthLayout.
-- /auth/login renders Login inside the layout.
-- /auth/register renders Register inside the layout.
-- /auth redirects to /auth/login.
-- The application root redirects to /auth/login.
+Keep the form local for now. A valid submission must not send a request, simulate successful registration, or log the password.
 
-Layout:
+Do not add API services, change the backend, or implement the login form.
 
-- Include a router-outlet for the child pages.
-- Center the content horizontally and vertically.
-- Use a responsive content container with mobile padding and a sensible maximum width.
-- Allow vertical scrolling when content exceeds the viewport.
-- Reuse existing design tokens, themes, and mobile-first styling conventions.
-- Use BEM naming for CSS classes.
-
-Keep Login and Register minimal, containing only their respective page headings.
-
-Do not add forms, authentication logic, guards, HTTP services, API integration, or additional components. Do not inspect or modify the backend.
-
-Verify that the build succeeds and report the component structure and available routes.
-
-Follow-up instruction: you can continue
+Verify the build and add focused validation tests, especially for whitespace-only names and each password requirement. Report the results.
