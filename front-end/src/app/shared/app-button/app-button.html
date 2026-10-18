@@ -1,0 +1,19 @@
+<button
+  class="app-button"
+  [class.app-button--vertical]="icon() && (iconPosition() === 'top' || iconPosition() === 'bottom')"
+  [type]="type()"
+  [disabled]="disabled()"
+  (click)="activate($event)"
+>
+  @if (icon(); as iconName) {
+    @if (iconPosition() === 'left' || iconPosition() === 'top') {
+      <app-icon class="app-button__icon" [name]="iconName" />
+    }
+  }
+  <span class="app-button__label">{{ label() }}</span>
+  @if (icon(); as iconName) {
+    @if (iconPosition() === 'right' || iconPosition() === 'bottom') {
+      <app-icon class="app-button__icon" [name]="iconName" />
+    }
+  }
+</button>
