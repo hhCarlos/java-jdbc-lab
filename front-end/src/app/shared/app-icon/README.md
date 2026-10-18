@@ -10,19 +10,33 @@ and add it to the standalone component's `imports` array.
 </span>
 ```
 
-`name` is the expected input. Supported names are `not-found` and `default`
-(an alias for the same symbol). Omitted, null, undefined, blank, and unknown names
+`name` is the expected input. Supported names are `products`, `profile`, `logout`, `not-found`, and `default`
+(an alias for `not-found`). Omitted, null, undefined, blank, and unknown names
 render `not-found`. Names are matched exactly through `ICON_REGISTRY`; arbitrary
 input cannot select an unregistered sprite symbol.
 
 Color inherits from surrounding text through `color: inherit` and the symbol's
-`stroke="currentColor"`. For example, these render the same icon in two colors
+`fill="currentColor"` or `stroke="currentColor"`. For example, these render the same icon in two colors
 without changing the sprite or existing page UI:
 
 ```html
 <span style="color: #c62828"><app-icon name="not-found" /></span>
 <span style="color: #1565c0"><app-icon name="default" /></span>
 ```
+The new icons preserve their original viewBoxes and artwork transforms:
+
+| Name | ViewBox | Paint |
+| --- | --- | --- |
+| `products` | `0 0 20 20` | Fill |
+| `profile` | `0 0 30.586 30.586` | Fill |
+| `logout` | `0 0 24 24` | Stroke |
+
+```html
+<app-icon name="products" />
+<app-icon name="profile" size="xl" label="Profile" />
+<app-icon name="logout" size="sm" label="Log out" />
+```
+
 Sizes use global tokens in `src/styles/abstracts/_tokens.scss`:
 
 | Size | Token | Value |

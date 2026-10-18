@@ -29,11 +29,13 @@ describe('AppIcon', () => {
 
   it('updates the resolved reference when the input changes', () => {
     const fixture = TestBed.createComponent(AppIcon);
-    for (const name of ['default', 'unknown', 'not-found', null]) {
+    for (const name of ['products', 'profile', 'logout', 'default', 'unknown', 'not-found', null]) {
       fixture.componentRef.setInput('name', name);
       fixture.detectChanges();
+      const expected = name === 'products' || name === 'profile' || name === 'logout'
+        ? name : 'not-found';
       expect(fixture.nativeElement.querySelector('use').getAttribute('href'))
-        .toBe('icons/sprite.svg#not-found');
+        .toBe(`icons/sprite.svg#${expected}`);
     }
   });
 

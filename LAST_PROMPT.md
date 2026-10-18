@@ -1,41 +1,43 @@
-# Latest task prompt
-
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T15:50:55-06:00
+Recorded at: 2026-10-18T15:56:56-06:00
 
-## Task prompt
+Task prompt:
 
-Forget about it it was a mistake, follow this instead Update the existing SVG icon system with a named registry and fallback behavior.
+Add these three icons to the existing SVG sprite and central icon registry.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Registry and fallback:
-- Register the supplied icon under the canonical name "not-found".
-- Support "default" as an alias pointing to the same symbol, without duplicating its SVG geometry.
-- Maintain one central typed registry mapping supported names to sprite symbol IDs.
-- Resolve icon names through this registry rather than constructing arbitrary sprite references from user input.
-- Missing, null, undefined, blank, or unknown names must render "not-found".
-- Document name as the expected input, but allow absence at runtime. Do not use Angular's required-input enforcement, since omitted names must render the fallback.
-- Preserve the existing size options and accessibility behavior.
-- Remove or update the old empty placeholder so fallback rendering always shows this actual icon.
+Register the names:
+- products
+- profile
+- logout
 
-SVG:
-- Add the following symbol to the existing sprite.
-- Preserve its viewBox, path geometry, fill="none", and stroke attributes.
-- Use stroke="currentColor".
-- Do not retain SVGRepo wrapper groups or carrier IDs.
+Use the symbols below. Preserve their individual viewBoxes and all meaningful geometry and transforms. Colors must inherit through currentColor.
 
-<symbol id="not-found" viewBox="0 0 24 24" fill="none">
+<symbol id="products" viewBox="0 0 20 20" fill="currentColor">
+  <path d="M17 8h1v11H2V8h1V6c0-2.76 2.24-5 5-5 .71 0 1.39.15 2 .42.61-.27 1.29-.42 2-.42 2.76 0 5 2.24 5 5v2zM5 6v2h2V6c0-1.13.39-2.16 1.02-3H8C6.35 3 5 4.35 5 6zm10 2V6c0-1.65-1.35-3-3-3h-.02c.63.84 1.02 1.87 1.02 3v2h2zm-5-4.22C9.39 4.33 9 5.12 9 6v2h2V6c0-.88-.39-1.67-1-2.22z" />
+</symbol>
+
+<symbol id="profile" viewBox="0 0 30.586 30.586" fill="currentColor">
+  <g transform="translate(-546.269 -195.397)">
+    <path d="M572.138,221.245a15.738,15.738,0,0,0-21.065-.253l-1.322-1.5a17.738,17.738,0,0,1,23.741.28Z" />
+    <path d="M561.464,204.152a4.96,4.96,0,1,1-4.96,4.96,4.966,4.966,0,0,1,4.96-4.96m0-2a6.96,6.96,0,1,0,6.96,6.96,6.96,6.96,0,0,0-6.96-6.96Z" />
+    <path d="M561.562,197.4a13.293,13.293,0,1,1-13.293,13.293A13.308,13.308,0,0,1,561.562,197.4m0-2a15.293,15.293,0,1,0,15.293,15.293A15.293,15.293,0,0,0,561.562,195.4Z" />
+  </g>
+</symbol>
+
+<symbol id="logout" viewBox="0 0 24 24" fill="none">
   <path
-    d="M14.2647 15.9377L12.5473 14.2346C11.758 13.4519 11.3633 13.0605 10.9089 12.9137C10.5092 12.7845 10.079 12.7845 9.67922 12.9137C9.22485 13.0605 8.83017 13.4519 8.04082 14.2346L4.04193 18.2622M14.2647 15.9377L14.606 15.5991C15.412 14.7999 15.8149 14.4003 16.2773 14.2545C16.6839 14.1262 17.1208 14.1312 17.5244 14.2688C17.9832 14.4253 18.3769 14.834 19.1642 15.6515L20 16.5001M14.2647 15.9377L18.22 19.9628M12 4H7.2C6.07989 4 5.51984 4 5.09202 4.21799C4.7157 4.40973 4.40973 4.71569 4.21799 5.09202C4 5.51984 4 6.0799 4 7.2V16.8C4 17.4466 4 17.9066 4.04193 18.2622M4.04193 18.2622C4.07264 18.5226 4.12583 18.7271 4.21799 18.908C4.40973 19.2843 4.7157 19.5903 5.09202 19.782C5.51984 20 6.07989 20 7.2 20H16.8C17.9201 20 18.4802 20 18.908 19.782C19.2843 19.5903 19.5903 19.2843 19.782 18.908C20 18.4802 20 17.9201 20 16.8V12M16 3L18.5 5.5M18.5 5.5L21 8M18.5 5.5L21 3M18.5 5.5L16 8"
+    d="M16 6.07026C18.3912 7.45349 20 10.0389 20 13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13C4 10.0389 5.60879 7.45349 8 6.07026M12 3V13"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
-    stroke-linejoin="round"
   />
 </symbol>
 
-Add focused tests for canonical names, the default alias, missing/blank names, and unknown names. Verify the Angular build and demonstrate inherited color.
+Update the registry's supported names and any affected tests or documentation. Preserve the existing not-found fallback, default alias, sizes, and accessibility behavior.
 
-Do not add dependencies or modify existing page UI. Report results and document how to register the next icon.
+Do not modify the sidebar or other page UI yet.
+
+Verify the Angular build and relevant existing tests. Report results and usage examples for all three icons.
