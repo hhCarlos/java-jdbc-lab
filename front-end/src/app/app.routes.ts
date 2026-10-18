@@ -1,19 +1,30 @@
 import { Routes } from '@angular/router';
+import { authGuard, authChildGuard } from './features/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'auth/login' },
   {
     path: 'app',
+    canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
     loadComponent: () => import('./layouts/app-layout/app-layout').then(m => m.AppLayout),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'products' },
       {
         path: 'products',
         loadComponent: () => import('./features/products/products').then(m => m.Products),
+        data: {
+          pageTitle: 'Products',
+          pageSubtitle: 'View and manage your products.',
+        },
       },
       {
         path: 'profile',
         loadComponent: () => import('./features/my-profile/my-profile').then(m => m.MyProfile),
+        data: {
+          pageTitle: 'My Profile',
+          pageSubtitle: 'View your account information.',
+        },
       },
     ],
   },

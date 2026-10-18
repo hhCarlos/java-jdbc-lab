@@ -40,6 +40,11 @@
     color: var(--color-text);
     text-decoration: none;
 
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
     &:hover {
       color: var(--color-link-hover);
       text-decoration: underline;
@@ -54,6 +59,16 @@
   &__main {
     min-width: 0;
     padding: var(--space-6) var(--space-4);
+  }
+
+  &__logout {
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
   @include styles.respond(md) {

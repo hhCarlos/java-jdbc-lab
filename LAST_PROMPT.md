@@ -1,41 +1,37 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T14:41:50-06:00
+Recorded at: 2026-10-18T14:48:07-06:00
 
 Task prompt:
 
-Connect the existing login form to authentication and add a bearer-token HTTP interceptor.
+Protect the application area and implement logout through the existing sidebar menu.
 
-Follow AGENTS.md and all applicable task prerequisites. Reuse the existing AuthService, session service, and global loader.
+Follow AGENTS.md and all applicable task prerequisites. Reuse the existing session service and HTTP interceptor.
 
-Login form:
-- Submit email and password only when the form is valid.
-- Preserve the password exactly as entered.
-- Prevent duplicate submissions and show the existing blocking loader while the request is pending.
-- On success, establish the session using the existing session-service API, clear the password, and navigate to /app/products.
-- Handle invalid credentials, connection failures, and unexpected errors with accessible English messages.
-- Keep the user on the login page when authentication fails.
-- Always release the loader and reset submission state on success, error, or cancellation. Use finalize and the existing subscription-cleanup conventions.
-- Preserve the current validation, layout, and styling.
+Route protection:
+- Add functional Angular guards protecting /app and its child routes.
+- Allow access only when the session service has a usable, unexpired token.
+- Otherwise, return a redirect to /auth/login using the router's guard redirect mechanism.
+- Keep /auth/login and /auth/register publicly accessible.
+- Preserve existing routes and layouts.
+- Remember that frontend guards control navigation; backend authorization remains authoritative.
 
-HTTP interceptor:
-- Implement a functional Angular interceptor and register it through the existing HttpClient configuration.
-- Obtain the current usable token from the session service.
-- Attach Authorization: Bearer <token> only to requests targeting this application's API.
-- Match API paths precisely; do not attach credentials to external URLs.
-- Exclude login and registration requests.
-- Leave requests unchanged when there is no usable token.
-- Preserve existing headers and interceptor configuration.
-- Never log tokens or credentials.
+Logout:
+- Add a semantic button labeled exactly "cerrar sesion" to the existing sidebar navigation.
+- Style it consistently with the menu, supporting keyboard interaction and both themes.
+- On activation, clear all in-memory session state and navigate to /auth/login with replaceUrl.
+- Do not call a nonexistent logout endpoint.
+- Verify that browser Back cannot restore access to guarded pages after logout.
 
-Do not add route guards, logout UI, automatic redirects on API errors, refresh tokens, persistent storage, or backend changes.
+Expired or rejected authentication:
+- When an authenticated request to this application's protected API returns 401, clear the matching current session and redirect to login.
+- Preserve the HTTP error for the caller.
+- Do not apply this behavior to login failures, registration, public requests, external URLs, or 403 responses.
+- A delayed 401 from an old token must not clear a newer session.
+- Avoid redirect loops and repeated navigation from concurrent failures.
 
-Add focused tests covering:
-- Successful login establishes the session and navigates.
-- Invalid forms do not submit.
-- Authentication errors preserve the page and display feedback.
-- Duplicate submissions are prevented.
-- Loader cleanup occurs on success, error, and cancellation.
-- The interceptor attaches the token to eligible API requests and excludes authentication requests, external URLs, and requests without a usable token.
+Do not add persistent storage, refresh tokens, roles, backend changes, or automatic retry of failed requests.
+
+Add focused tests covering authenticated and unauthenticated route access, expired sessions, logout, protected-request 401 handling, and exclusion of login failures and stale-token responses.
 
 Run the relevant tests and Angular build. Report results and manual verification steps.
