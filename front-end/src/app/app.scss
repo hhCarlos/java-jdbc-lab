@@ -1,0 +1,5 @@
+// Routed layers stay below the root loader, even when descendants create stacking contexts.
+.app__content {
+  position: relative;
+  z-index: var(--z-base);
+}

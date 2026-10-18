@@ -1,0 +1,15 @@
+<div
+  #panel
+  class="blocking-loader"
+  [hidden]="!loader.visible()"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Please wait…"
+>
+  <span class="blocking-loader__spinner" aria-hidden="true"></span>
+  <p class="blocking-loader__message">Please wait…</p>
+</div>
+<span class="u-visually-hidden" role="status" aria-live="polite" aria-atomic="true">{{
+  loader.visible() ? 'Please wait…' : ''
+}}</span>

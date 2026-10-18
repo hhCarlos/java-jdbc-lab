@@ -1,3 +1,5 @@
+@use '../abstracts' as tokens;
+
 // Only existing token names are generated; values remain themeable at runtime.
 $spacing-steps: 0, 1, 2, 3, 4, 6, 8, 12, 16;
 $sides: (
@@ -53,4 +55,8 @@ $sides: (
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+@each $layer in tokens.$z-layers {
+  .u-z-#{$layer} { z-index: var(--z-#{$layer}); }
 }

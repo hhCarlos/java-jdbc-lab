@@ -56,7 +56,7 @@ referencing the matching `--space-*` custom properties.
 
 Examples: `class="u-p-4 u-mb-6 u-radius-sm u-shadow-sm"` or
 `class="u-px-4 u-py-2"`. Gap utilities require a layout that supports gap,
-such as grid or flex. There are 163 utility classes, no negative spacing
+such as grid or flex. There are 170 utility classes, no negative spacing
 variants, and no responsive variants. The visually hidden utility's `-1px`
 margin is a clipping technique, not a spacing-scale value. Use it for text
 such as control labels, not focusable controls that would become invisible.
@@ -105,3 +105,28 @@ Use separate `--color-success-text` and `--color-error-text` for readable
 status messages. Password checklist labels keep `--color-text`; their
 state is conveyed by circular indicator colors, a checkmark, and hidden
 satisfied/unsatisfied text. Brand primary colors are independent of status.
+
+## Application layers
+
+Reuse the existing runtime scale. `overlay` means backdrop and `toast` means
+notification; their names remain compatible with existing tokens.
+
+| Layer | Token | Utility | Value |
+| --- | --- | --- | --- |
+| Base content | `--z-base` | `u-z-base` | 0 |
+| Dropdown | `--z-dropdown` | `u-z-dropdown` | 100 |
+| Sticky | `--z-sticky` | `u-z-sticky` | 200 |
+| Backdrop | `--z-overlay` | `u-z-overlay` | 300 |
+| Modal | `--z-modal` | `u-z-modal` | 400 |
+| Notification | `--z-toast` | `u-z-toast` | 500 |
+| Blocking loader | `--z-blocking-loader` | `u-z-blocking-loader` | 600 |
+
+Utilities are generated from `$z-layers` in `abstracts/_tokens.scss`. Use tokens
+or utilities instead of component-specific numbers. Utilities require positioned
+(or flex/grid) elements for z-index to apply. The blocking loader is the highest
+application layer; reserve it for the root loader. The routed content wrapper
+creates the base stacking context, containing all routed layers. Keep `html`,
+`body`, `app-root`, and loader ancestors free of transforms, filters, containment,
+isolation, and positioned z-index that could trap the fixed overlay. Native
+browser top-layer elements (such as `showModal()` dialogs) sit above application
+z-index; do not introduce them without coordinating with the blocking loader.
