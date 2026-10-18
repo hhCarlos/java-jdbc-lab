@@ -5,12 +5,24 @@ and add it to the standalone component's `imports` array.
 
 ```html
 <span style="color: var(--color-primary)">
-  <app-icon name="placeholder" size="xl" />
+  <app-icon name="not-found" size="xl" />
   Example text
 </span>
 ```
 
-Color inherits from surrounding text. The empty placeholder renders no artwork.
+`name` is the expected input. Supported names are `not-found` and `default`
+(an alias for the same symbol). Omitted, null, undefined, blank, and unknown names
+render `not-found`. Names are matched exactly through `ICON_REGISTRY`; arbitrary
+input cannot select an unregistered sprite symbol.
+
+Color inherits from surrounding text through `color: inherit` and the symbol's
+`stroke="currentColor"`. For example, these render the same icon in two colors
+without changing the sprite or existing page UI:
+
+```html
+<span style="color: #c62828"><app-icon name="not-found" /></span>
+<span style="color: #1565c0"><app-icon name="default" /></span>
+```
 Sizes use global tokens in `src/styles/abstracts/_tokens.scss`:
 
 | Size | Token | Value |
@@ -32,16 +44,18 @@ decorative when text or the control's own label already supplies that name.
 1. Add a `<symbol id="icon-name" viewBox="0 0 24 24">` to
    `public/icons/sprite.svg`, using the artwork's actual viewBox if different.
    Paste only its SVG shapes inside the symbol, without a nested root `<svg>`.
-   The symbol ID is the icon name. The comment inside `placeholder` marks where
-   the first icon's paths can be pasted instead.
 2. Use `currentColor` for monochrome fills or strokes on the appropriate symbol,
    group, or shapes. Preserve `fill="none"`, `stroke="none"`, stroke widths,
    line caps, line joins, fill rules, and other geometry attributes as needed.
    Do not apply both fill and stroke indiscriminately. The component leaves
    those painting decisions to the symbol.
-3. Add the exact symbol ID to the `IconName` union in `app-icon.ts`, then use it
-   as the `name` input. Keep the union synchronized if you rename a symbol.
+3. Add a name-to-symbol entry to `ICON_REGISTRY` in `icon-registry.ts`, for
+   example `search: 'search'`. `IconName` is derived from this central registry.
+   For an alias, map another name to the same ID; do not duplicate geometry.
+4. Use `<app-icon name="search" />`. Extend the focused component tests for
+   any new behavior, then run `npm test -- --watch=false` and `npm run build`
+   from `front-end/`.
 
-The component references `icons/sprite.svg#<name>` relative to the application's
+The component references `icons/sprite.svg#<registered-symbol-id>` relative to the application's
 base URL. Angular copies `public/` into the build output; no sprite registration
 or dependency is needed.

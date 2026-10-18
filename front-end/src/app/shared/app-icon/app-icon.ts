@@ -1,6 +1,8 @@
 import { Component, computed, input } from '@angular/core';
 
-export type IconName = 'placeholder';
+import { resolveIconSymbol } from './icon-registry';
+
+export type { IconName } from './icon-registry';
 export type IconSize = 'sm' | 'md' | 'xl' | 'xll';
 
 @Component({
@@ -11,7 +13,9 @@ export type IconSize = 'sm' | 'md' | 'xl' | 'xll';
   host: { '[attr.data-size]': 'size()' },
 })
 export class AppIcon {
-  readonly name = input.required<IconName>();
+  /** Expected icon name; omitted or unsupported values render the fallback. */
+  readonly name = input<string | null>();
+  readonly symbolId = computed(() => resolveIconSymbol(this.name()));
   readonly size = input<IconSize>('md');
   readonly label = input<string>();
   readonly accessibleLabel = computed(() => this.label()?.trim() || null);
