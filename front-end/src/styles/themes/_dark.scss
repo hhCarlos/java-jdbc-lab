@@ -1,0 +1,17 @@
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-background: hsl(225 15% 9%);
+  --color-surface: hsl(225 12% 13%);
+  --color-text: hsl(40 20% 93%);
+  --color-text-muted: hsl(40 10% 68%);
+  --color-border: hsl(225 10% 28%);
+  --color-border-strong: hsl(225 8% 50%);
+  --color-link: hsl(0 85% 74%);
+  --color-link-hover: hsl(0 90% 83%);
+  --color-focus: hsl(215 90% 75%);
+  --color-action-hover: hsl(0 100% 35%);
+  --color-action-active: hsl(0 100% 30%);
+  --color-selection-background: hsl(0 60% 30%);
+  --color-selection-text: hsl(40 20% 93%);
+  --color-shadow: hsl(0 0% 0% / 0.35);
+}

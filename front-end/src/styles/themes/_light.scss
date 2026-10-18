@@ -1,0 +1,18 @@
+:root,
+html[data-theme='light'] {
+  color-scheme: light;
+  --color-background: hsl(40 25% 96%);
+  --color-surface: hsl(40 20% 99%);
+  --color-text: hsl(225 15% 14%);
+  --color-text-muted: hsl(225 10% 40%);
+  --color-border: hsl(40 12% 80%);
+  --color-border-strong: hsl(225 8% 50%);
+  --color-link: hsl(0 100% 35%);
+  --color-link-hover: hsl(0 100% 28%);
+  --color-focus: hsl(215 80% 38%);
+  --color-action-hover: hsl(0 100% 35%);
+  --color-action-active: hsl(0 100% 30%);
+  --color-selection-background: hsl(0 75% 88%);
+  --color-selection-text: hsl(225 15% 14%);
+  --color-shadow: hsl(225 15% 14% / 0.12);
+}
