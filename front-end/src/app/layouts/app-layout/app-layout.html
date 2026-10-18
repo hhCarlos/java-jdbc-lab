@@ -1,6 +1,11 @@
 <div class="app-layout">
   <app-sidebar (logoutRequested)="logout()" />
   <main class="app-layout__main">
-    <router-outlet />
+    @if (page(); as page) {
+      <app-page-header [title]="page.title" [subtitle]="page.subtitle" />
+    }
+    <div class="app-layout__content">
+      <router-outlet />
+    </div>
   </main>
 </div>

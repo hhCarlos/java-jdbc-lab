@@ -15,6 +15,9 @@
 
   &__main {
     min-width: 0;
+  }
+
+  &__content {
     padding: var(--space-6) var(--space-4);
   }
 
@@ -22,7 +25,7 @@
     grid-template-columns: 14rem minmax(0, 1fr);
     grid-template-rows: 1fr;
 
-    &__main {
+    &__content {
       padding: var(--space-8);
     }
   }

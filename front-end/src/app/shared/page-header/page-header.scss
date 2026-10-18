@@ -1,0 +1,30 @@
+@use '../../../styles/abstracts' as styles;
+
+:host {
+  display: block;
+}
+
+.page-header {
+  padding: var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+
+  &__title {
+    margin: var(--space-0);
+    font-size: var(--font-size-2xl);
+  }
+
+  &__subtitle {
+    margin: var(--space-2) var(--space-0) var(--space-0);
+    color: var(--color-text-muted);
+  }
+
+  @include styles.respond(md) {
+    padding: var(--space-8);
+
+    &__title {
+      font-size: var(--font-size-3xl);
+    }
+  }
+}
