@@ -1,0 +1,14 @@
+<div class="app-layout">
+  <aside class="app-layout__sidebar">
+    <div class="app-layout__logo" aria-hidden="true"></div>
+    <nav class="app-layout__nav" aria-label="Main navigation">
+      <a class="app-layout__link" routerLink="/app/products"
+        routerLinkActive="app-layout__link--active" ariaCurrentWhenActive="page">Products</a>
+      <a class="app-layout__link" routerLink="/app/profile"
+        routerLinkActive="app-layout__link--active" ariaCurrentWhenActive="page">My Profile</a>
+    </nav>
+  </aside>
+  <main class="app-layout__main">
+    <router-outlet />
+  </main>
+</div>

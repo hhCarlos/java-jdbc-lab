@@ -1,26 +1,46 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:37:42-06:00
+Recorded at: 2026-10-17T18:47:58-06:00
 
 ## Task prompt
 
-Implement the login form inside the existing Login component.
+Create the main application layout in front-end/, following the supplied wireframe.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Use Angular reactive forms with:
-- Email: required, using Angular's email validator.
-- Password: required. Do not apply registration complexity rules or trim the password.
+Create three standalone components:
+- AppLayout
+- Products
+- MyProfile
 
-UI:
-- Keep all text in English.
-- Use accessible labels and autocomplete="username" for email and autocomplete="current-password" for password.
-- Show validation errors after a field is touched or submission is attempted.
-- On invalid submission, mark fields as touched and focus the first invalid field.
-- Add a "Sign in" submit button.
-- Add a "Don't have an account? Create one" link to /auth/register.
-- Reuse the existing AuthLayout, form styling, semantic tokens, and BEM/mobile-first conventions.
+Routing:
+- /app uses AppLayout.
+- /app/products renders Products inside its router-outlet.
+- /app/profile renders MyProfile inside its router-outlet.
+- /app redirects to /app/products.
+- Preserve the existing authentication routes and root redirect.
 
-Keep this phase local: do not send HTTP requests, simulate successful login, log credentials, or add authentication services or guards.
+AppLayout:
+- On desktop, use a left sidebar approximately 14rem wide, with the main content filling the remaining width.
+- Place an empty bordered rectangular logo placeholder at the top of the sidebar. Do not invent a logo or load an image.
+- Below it, include two navigation links:
+  - "Products" → /app/products
+  - "My Profile" → /app/profile
+- Visually indicate the active link using the existing red accent and aria-current.
+- Keep sidebar markup within AppLayout.
+- Place the router-outlet inside a semantic main content area.
+- Use a viewport-height layout while allowing scrolling as content grows.
+- On mobile, place navigation above the content. Use the existing respond(md) mixin to switch to the desktop sidebar arrangement.
+- Reuse existing theme, spacing, typography, and border tokens.
+- Follow BEM naming and mobile-first styling.
 
-Verify that the Angular build succeeds and report the changes.
+Pages:
+- Products contains only a "Products" heading.
+- MyProfile contains only a "My Profile" heading.
+- Leave the remaining content empty.
+
+Do not add forms, tables, mock data, HTTP integration, authentication guards, additional navigation items, or backend changes.
+
+Verify that the Angular build succeeds and report the routes and component structure.
+
+Follow-up instruction: you can do it now
