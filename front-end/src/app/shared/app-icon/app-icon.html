@@ -1,0 +1,8 @@
+<svg
+  [attr.aria-hidden]="accessibleLabel() ? null : 'true'"
+  [attr.role]="accessibleLabel() ? 'img' : null"
+  [attr.aria-label]="accessibleLabel()"
+  focusable="false"
+>
+  <use [attr.href]="'icons/sprite.svg#' + name()" />
+</svg>

@@ -1,39 +1,37 @@
-# Latest task prompt
-
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T15:28:21-06:00
+Recorded at: 2026-10-18T15:40:44-06:00
 
 ## Task prompt
 
-Add a reusable PageHeader component and integrate it into AppLayout using the existing route metadata.
+Prepare a minimal reusable SVG icon system in front-end/.
 
-Follow AGENTS.md and all applicable task prerequisites. Inspect the current layout after the sidebar extraction.
+Follow AGENTS.md and all applicable task prerequisites.
 
-PageHeader:
-- Create a standalone presentational component.
-- Accept a required title input and an optional subtitle input.
-- Render the title as an h1.
-- Render the subtitle only when it contains nonblank text.
-- Keep router dependencies out of this component.
-- Reuse existing theme, typography, spacing, and border tokens.
-- Follow BEM and mobile-first conventions.
+Sprite:
+- Create public/icons/sprite.svg.
+- Include one empty symbol named "placeholder" with viewBox="0 0 24 24".
+- Add a comment indicating where the first icon's SVG paths should be pasted.
+- Use symbol IDs as icon names.
+- Monochrome icon fills or strokes must use currentColor. Preserve fill="none", stroke="none", and other geometry attributes where appropriate; do not force both fill and stroke onto every shape.
 
-AppLayout:
-- Read pageTitle and pageSubtitle from the active primary child route's data.
-- Resolve the active route on initial load and after successful navigation, including lazy-loaded and nested routes.
-- Update the header when navigating between Products and My Profile.
-- Follow existing reactive and subscription-cleanup conventions.
-- Hide the header if the active route provides no valid title.
+Component:
+- Create a standalone AppIcon component in the existing shared component structure.
+- Render icons using SVG use references to the local sprite.
+- Provide a typed name input, initially supporting "placeholder".
+- Provide exactly these size options:
+  - sm: 1rem
+  - md: 1.25rem, default
+  - xl: 1.5rem
+  - xll: 2rem
+- Define reusable icon-size tokens in the existing styling foundation.
+- Inherit color from the surrounding text.
+- Keep icons decorative and hidden from assistive technology by default.
+- Support an optional accessible label for meaningful standalone icons.
+- Do not make the icon itself interactive; buttons and links provide interaction.
 
-Structure:
-- Preserve AppSidebar and its logout event handling.
-- Inside the main area, place PageHeader above a content wrapper containing the router-outlet.
-- The header spans the main content area's width, alongside the sidebar.
-- Keep the header in normal document flow; do not add sticky or fixed positioning.
-- Remove duplicate page headings from Products and MyProfile so each page has one h1.
-- Preserve the existing route metadata values, guards, and navigation behavior.
+Document how to add a symbol, update the supported names, and use the component with a size and inherited color.
 
-Do not add product views, API calls, or backend changes.
+Do not add dependencies, actual icon artwork, or modify existing page/sidebar UI.
 
-Add focused tests for initial metadata, title updates on navigation, and an absent subtitle. Update affected existing tests, run the relevant tests and Angular build, and report results.
+Verify the Angular build and report changed files with a minimal usage example.
