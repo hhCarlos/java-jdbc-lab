@@ -1,46 +1,24 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T18:47:58-06:00
+Recorded at: 2026-10-17T18:59:32-06:00
 
-## Task prompt
-
-Create the main application layout in front-end/, following the supplied wireframe.
+Task prompt:
+Configure only the Angular development proxy in front-end/.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Create three standalone components:
-- AppLayout
-- Products
-- MyProfile
+Requirements:
+- Route requests under /api/ to the local Spring Boot backend.
+- Remove the /api prefix before forwarding. For example, /api/auth/register must reach /auth/register on the backend.
+- Confirm the actual backend port from existing documentation or configuration using read-only inspection.
+- Use the proxy format and path matching supported by the application's Angular 21 builder.
+- Configure the existing npm start / Angular serve setup to load the proxy automatically.
+- Keep Angular page routes, including /auth and /app, outside the proxy.
+- Do not change backend routes, Spring Security, or CORS configuration.
+- Do not add HTTP services, form integration, credentials, or Docker changes.
 
-Routing:
-- /app uses AppLayout.
-- /app/products renders Products inside its router-outlet.
-- /app/profile renders MyProfile inside its router-outlet.
-- /app redirects to /app/products.
-- Preserve the existing authentication routes and root redirect.
+Document the local startup commands and explain that the backend must be running separately.
 
-AppLayout:
-- On desktop, use a left sidebar approximately 14rem wide, with the main content filling the remaining width.
-- Place an empty bordered rectangular logo placeholder at the top of the sidebar. Do not invent a logo or load an image.
-- Below it, include two navigation links:
-  - "Products" → /app/products
-  - "My Profile" → /app/profile
-- Visually indicate the active link using the existing red accent and aria-current.
-- Keep sidebar markup within AppLayout.
-- Place the router-outlet inside a semantic main content area.
-- Use a viewport-height layout while allowing scrolling as content grows.
-- On mobile, place navigation above the content. Use the existing respond(md) mixin to switch to the desktop sidebar arrangement.
-- Reuse existing theme, spacing, typography, and border tokens.
-- Follow BEM naming and mobile-first styling.
+Verify that the frontend builds and starts with the proxy configuration. If the backend is available, verify forwarding with a harmless read-only request to an existing public endpoint. Otherwise, state that end-to-end forwarding remains unverified.
 
-Pages:
-- Products contains only a "Products" heading.
-- MyProfile contains only a "My Profile" heading.
-- Leave the remaining content empty.
-
-Do not add forms, tables, mock data, HTTP integration, authentication guards, additional navigation items, or backend changes.
-
-Verify that the Angular build succeeds and report the routes and component structure.
-
-Follow-up instruction: you can do it now
+Report changed files, the proxy target, and an example mapping from a frontend URL to the corresponding backend URL.
