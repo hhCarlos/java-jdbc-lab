@@ -1,36 +1,23 @@
-# Task prompt record
-
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-17T17:49:05-06:00
-Redaction: None required.
+Recorded at: 2026-10-17T17:57:28-06:00
 
 ## Task prompt
 
-Create a GitHub Actions workflow for running this project's backend tests.
+Initialize an empty Angular 21 application inside front-end/ using Node.js 24 and npm.
 
-Before making changes:
-- Follow AGENTS.md and all applicable instructions.
-- Complete Git preflight, validate the required author identity, and record this task.
-- Inspect pom.xml, the Maven Wrapper if present, test configuration, and existing workflows.
-- Run the existing tests locally and report the baseline result. If they fail, investigate and report the failure before adding the workflow.
+Follow AGENTS.md and all applicable task prerequisites.
 
-Workflow requirements:
-- Store the workflow under .github/workflows/.
-- Run on pull requests targeting the repository's default branch, pushes to that branch, and manual dispatch.
-- Check out the code and configure Java 17.
-- Prefer the existing Maven Wrapper; otherwise use Maven.
-- Cache Maven dependencies.
-- Run Maven tests in non-interactive mode.
-- Ensure tests do not depend on the developer's local .env, credentials, or running containers.
-- Inspect whether tests use H2, mocks, or Oracle before deciding what CI requires. Do not silently skip tests or claim Oracle coverage from H2 tests.
-- Upload Surefire reports on test failure.
-- Use minimal workflow permissions and maintained action versions.
+Requirements:
+- Use Angular CLI 21 and Angular 21 dependencies.
+- Enable Angular Router with an empty route configuration.
+- Use standalone components and SCSS.
+- Use client-side rendering without SSR.
+- Remove the generated welcome content, leaving only the router outlet in the root template.
+- Keep package-lock.json.
+- Do not initialize a nested Git repository.
+- Do not add pages, authentication, API integration, UI libraries, or extra architecture.
+- Do not inspect or modify the backend.
+- Preserve the existing CI workflow and Docker configuration.
 
-The Git preflight governs your work as the coding agent. Do not execute that developer preflight inside CI, where detached HEAD and default-branch builds are expected.
-
-Keep the change focused on test automation. Do not add deployment, frontend builds, automatic commits, or pushes.
-
-Validate the workflow and rerun relevant local tests after any configuration changes.
-
-Report changed files, test results, configuration assumptions, and how to check the first GitHub Actions run. Clearly distinguish local validation from an actual GitHub-hosted run.
+Install dependencies, verify that the application builds, and report the commands to start it locally and the files changed.
