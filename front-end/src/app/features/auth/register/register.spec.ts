@@ -1,15 +1,29 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Register } from './register';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { vi } from 'vitest';
+import { AuthService } from '../auth.service';
+import { RegistrationResponse } from '../auth.models';
 
 describe('Register', () => {
   let fixture: ComponentFixture<Register>;
   let element: HTMLElement;
+  let response: Subject<RegistrationResponse>;
+  const register = vi.fn();
+  const values = { name: 'María', lastname: 'Jean-Luc', email: 'person@example.com', password: ' aA1! ' };
+  const publicUser: RegistrationResponse = {
+    id: 42, name: values.name, lastname: values.lastname, email: values.email,
+    createdAt: '2026-10-17T19:00:00-06:00', updatedAt: '2026-10-17T19:00:00-06:00',
+  };
 
   beforeEach(async () => {
+    response = new Subject<RegistrationResponse>();
+    register.mockReset().mockReturnValue(response);
     await TestBed.configureTestingModule({
       imports: [Register],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), { provide: AuthService, useValue: { register } }],
     }).compileComponents();
     fixture = TestBed.createComponent(Register);
     fixture.detectChanges();
@@ -89,18 +103,82 @@ describe('Register', () => {
     submit();
     expect(Object.values(form.controls).every(control => control.touched)).toBe(true);
     expect(document.activeElement).toBe(element.querySelector('#register-lastname'));
+    expect(register).not.toHaveBeenCalled();
   });
 
-  it('keeps a valid submission local with the password unchanged', () => {
+  it('submits unchanged values and prevents duplicate submissions while pending', () => {
+    fixture.componentInstance['form'].setValue(values);
+    submit();
+    submit();
+    expect(register).toHaveBeenCalledExactlyOnceWith(values);
+    expect(element.querySelector('button')?.disabled).toBe(true);
+    expect(element.querySelector('button')?.textContent).toBe('Creating account...');
+    expect(element.querySelector('[role="status"]')?.textContent).toBe('Creating account...');
+    response.complete();
+    fixture.detectChanges();
+    expect(element.querySelector('button')?.disabled).toBe(false);
+    expect(element.querySelector('button')?.textContent).toBe('Create account');
+  });
+
+  it('confirms success accessibly, clears only the password, and offers sign in', () => {
     const form = fixture.componentInstance['form'];
-    const values = { name: 'María', lastname: 'Jean-Luc', email: 'person@example.com', password: ' aA1! ' };
     form.setValue(values);
     submit();
-    expect(form.valid).toBe(true);
-    expect(form.getRawValue()).toEqual(values);
+    response.next(publicUser);
+    response.complete();
+    fixture.detectChanges();
+    expect(form.getRawValue()).toEqual({ ...values, password: '' });
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('Your account has been created.');
+    expect(element.querySelector('[role="status"]')?.getAttribute('aria-live')).toBe('polite');
     expect(element.querySelector('.register__errors')).toBeNull();
-    expect(element.querySelector('button')?.textContent).toBe('Create account');
     expect(element.querySelector('a')?.getAttribute('href')).toBe('/auth/login');
+    expect(element.querySelector('button')?.disabled).toBe(false);
+  });
+
+  for (const [status, message] of [
+    [400, 'Some registration details were rejected.'],
+    [409, 'This email is already registered.'],
+    [0, 'Unable to connect to the server.'],
+    [500, 'Unable to create your account. Please try again.'],
+  ] as const) {
+    it(`handles HTTP ${status} safely and allows a successful retry`, () => {
+      const form = fixture.componentInstance['form'];
+      form.setValue(values);
+      submit();
+      response.error(new HttpErrorResponse({ status, error: { detail: 'private internal details' } }));
+      fixture.detectChanges();
+      expect(element.querySelector('[role="status"]')?.textContent).toContain(message);
+      expect(element.textContent).not.toContain('private internal details');
+      expect(form.getRawValue()).toEqual(values);
+      expect(element.querySelector('button')?.disabled).toBe(false);
+      expect(element.querySelector('button')?.textContent).toBe('Create account');
+      response = new Subject<RegistrationResponse>();
+      register.mockReturnValue(response);
+      submit();
+      expect(register).toHaveBeenCalledTimes(2);
+      response.next(publicUser);
+      response.complete();
+      fixture.detectChanges();
+      expect(element.textContent).toContain('Your account has been created.');
+    });
+  }
+
+  it('uses safe feedback for a non-HTTP error', () => {
+    fixture.componentInstance['form'].setValue(values);
+    submit();
+    response.error(new Error('private internal details'));
+    fixture.detectChanges();
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('Unable to create your account. Please try again.');
+    expect(element.textContent).not.toContain('private internal details');
+  });
+
+  it('unsubscribes from a pending request on destruction', () => {
+    fixture.componentInstance['form'].setValue(values);
+    submit();
+    expect(response.observed).toBe(true);
+    fixture.destroy();
+    expect(response.observed).toBe(false);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
   });
 
   for (const theme of ['light', 'dark']) {

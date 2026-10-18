@@ -1,7 +1,7 @@
 <section class="register" aria-labelledby="register-heading">
   <h1 class="register__heading" id="register-heading">Register</h1>
   <p class="register__instructions">All fields are required.</p>
-  <form class="register__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <form class="register__form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="submitting()" novalidate>
     <div class="register__field">
       <label class="register__label" for="register-name">First name</label>
       <input class="register__input" id="register-name" name="name" type="text"
@@ -74,7 +74,8 @@
         </div>
       }
     </div>
-    <button class="register__submit" type="submit">Create account</button>
+    <button class="register__submit" type="submit" [disabled]="submitting()">{{ submitting() ? 'Creating account...' : 'Create account' }}</button>
   </form>
+  <p role="status" aria-live="polite" aria-atomic="true">{{ submitting() ? 'Creating account...' : feedback() }}</p>
   <p class="register__signin">Already have an account? <a routerLink="/auth/login">Sign in</a></p>
 </section>

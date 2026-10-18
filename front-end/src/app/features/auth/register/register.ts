@@ -1,4 +1,9 @@
-import { Component, ElementRef, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, DestroyRef, ElementRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
+
+import { AuthService } from '../auth.service';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -27,6 +32,10 @@ type Field = 'name' | 'lastname' | 'email' | 'password';
 })
 export class Register {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly submitting = signal(false);
+  protected readonly feedback = signal('');
   protected submitted = false;
   protected passwordFocused = false;
   protected readonly passwordChecklist = [
@@ -71,13 +80,44 @@ export class Register {
   }
 
   protected submit(): void {
+    if (this.submitting()) return;
+    this.feedback.set('');
     this.submitted = true;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       const firstInvalid = (Object.keys(this.form.controls) as Field[])
         .find(field => this.form.controls[field].invalid);
       this.host.nativeElement.querySelector<HTMLInputElement>(`[formControlName="${firstInvalid}"]`)?.focus();
+      return;
     }
-    // Valid values remain local until registration integration is implemented.
+
+    this.submitting.set(true);
+    this.auth.register(this.form.getRawValue()).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.submitting.set(false)),
+    ).subscribe({
+      next: () => {
+        this.submitted = false;
+        this.form.controls.password.reset('');
+        this.feedback.set('Your account has been created. You can now sign in.');
+      },
+      error: (error: unknown) => {
+        let message = 'Unable to create your account. Please try again.';
+        if (error instanceof HttpErrorResponse) {
+          switch (error.status) {
+            case 0:
+              message = 'Unable to connect to the server. Check your connection and try again.';
+              break;
+            case 400:
+              message = 'Some registration details were rejected. Check your entries. Use an email of at most 254 characters and a password of at most 72 UTF-8 bytes, then try again.';
+              break;
+            case 409:
+              message = 'This email is already registered. Sign in or use a different email address.';
+              break;
+          }
+        }
+        this.feedback.set(message);
+      },
+    });
   }
 }
