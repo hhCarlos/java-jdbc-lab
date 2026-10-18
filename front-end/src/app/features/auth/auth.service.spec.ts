@@ -65,3 +65,44 @@ describe('AuthService registration', () => {
     });
   }
 });
+
+describe('AuthService login', () => {
+  let service: AuthService;
+  let http: HttpTestingController;
+  const request = { email: 'ana@example.test', password: ' aA1! ' };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('waits for subscription, posts unchanged credentials, and returns the login response', async () => {
+    const result = service.login(request);
+    http.expectNone('/api/auth/login');
+    const promise = firstValueFrom(result);
+    const pending = http.expectOne('/api/auth/login');
+    expect(pending.request.method).toBe('POST');
+    expect(pending.request.body).toEqual(request);
+    expect(pending.request.body.password).toBe(' aA1! ');
+    const response = { accessToken: 'test-token', tokenType: 'Bearer' as const, expiresIn: 900 };
+    pending.flush(response);
+    expect(await promise).toEqual(response);
+  });
+
+  for (const status of [400, 401, 500]) {
+    it(`preserves the HTTP ${status} error and problem body`, async () => {
+      const promise = firstValueFrom(service.login(request)).catch((error: HttpErrorResponse) => error);
+      const problem = { title: 'Login failed', status, detail: 'Request rejected' };
+      http.expectOne('/api/auth/login').flush(problem, { status, statusText: 'Error' });
+      const error = await promise as HttpErrorResponse;
+      expect(error).toBeInstanceOf(HttpErrorResponse);
+      expect(error.status).toBe(status);
+      expect(error.error).toEqual(problem);
+    });
+  }
+});

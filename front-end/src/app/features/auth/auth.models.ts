@@ -1,3 +1,15 @@
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  tokenType: 'Bearer';
+  /** Token lifetime in seconds. */
+  expiresIn: number;
+}
+
 export interface RegisterRequest {
   name: string;
   lastname: string;
