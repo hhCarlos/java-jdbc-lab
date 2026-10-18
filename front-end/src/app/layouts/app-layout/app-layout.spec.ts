@@ -5,6 +5,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { SessionService } from '../../features/auth/session.service';
 import { AppLayout } from './app-layout';
+import { ProductsService } from '../../features/products/products.service';
+import { of } from 'rxjs';
 
 @Component({ template: '' })
 class EmptyPage {}
@@ -20,7 +22,7 @@ describe('AppLayout metadata', () => {
         { path: 'missing', component: EmptyPage },
         { path: 'invalid', component: EmptyPage, data: { pageTitle: 123 } },
       ],
-    }]), { provide: SessionService, useValue: { getAccessToken: () => 'token', clear: vi.fn() } }],
+    }]), { provide: ProductsService, useValue: { listMine: () => of([]) } }, { provide: SessionService, useValue: { getAccessToken: () => 'token', clear: vi.fn() } }],
   }));
 
   it('renders initial lazy route metadata above wrapped content', async () => {

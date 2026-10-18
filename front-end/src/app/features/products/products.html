@@ -1,0 +1,28 @@
+<ng-template #price let-row>{{ row.price | number:'1.2-2' }}</ng-template>
+<ng-template #status let-row>{{ statusLabel(row.statusCode) }}</ng-template>
+
+<section class="products" aria-label="Product listing" [attr.aria-busy]="state().kind === 'loading'">
+  @let current = state();
+  @switch (current.kind) {
+    @case ('loading') {
+      <p class="products__loading" role="status">Loading products…</p>
+    }
+    @case ('error') {
+      <div class="products__error" role="alert">
+        <p>{{ current.message }}</p>
+        @if (current.recoverable) {
+          <app-button label="Retry" (pressed)="retry()" />
+        }
+      </div>
+    }
+    @case ('ready') {
+      <app-table [rows]="current.rows" [columns]="columns()" rowKey="id"
+        [emptyMessage]="current.page === 0 ? 'No products yet.' : 'No products on this page.'" />
+    }
+  }
+  <nav class="products__pagination" aria-label="Products pagination">
+    <app-button label="Previous" [disabled]="current.page === 0" (pressed)="previous()" />
+    <span class="products__page" aria-live="polite">Page {{ current.page + 1 }}</span>
+    <app-button label="Next" [disabled]="!canNext()" (pressed)="next()" />
+  </nav>
+</section>
