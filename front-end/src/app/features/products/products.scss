@@ -6,6 +6,10 @@
 .products {
   color: var(--color-text);
 
+  &__actions {
+    margin-bottom: var(--space-4);
+  }
+
   &__loading {
     padding: var(--space-6) var(--space-0);
     color: var(--color-text-muted);

@@ -1,3 +1,4 @@
+import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal, TemplateRef, viewChild } from '@angular/core';
@@ -21,6 +22,12 @@ type ProductsState =
   styleUrl: './products.scss',
 })
 export class Products {
+  private readonly router = inject(Router);
+
+  protected newProduct(): void {
+    void this.router.navigate(['/app/products/create']);
+  }
+
   private readonly service = inject(ProductsService);
   private readonly requests = new BehaviorSubject<number>(0);
   protected readonly pageSize = 20;

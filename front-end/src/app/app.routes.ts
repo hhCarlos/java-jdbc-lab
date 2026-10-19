@@ -11,6 +11,15 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'products' },
       {
+        path: 'products/create',
+        loadComponent: () => import('./features/products/product-form/product-form').then(m => m.ProductForm),
+        data: {
+          mode: 'create',
+          pageTitle: 'New product',
+          pageSubtitle: 'Enter the details for your new product.',
+        },
+      },
+      {
         path: 'products',
         loadComponent: () => import('./features/products/products').then(m => m.Products),
         data: {

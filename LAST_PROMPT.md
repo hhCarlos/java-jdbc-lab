@@ -1,30 +1,36 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T17:39:51-06:00
+Recorded at: 2026-10-18T18:57:29-06:00
 
 Task prompt:
 
-Connect the existing Products page to ProductsService and render the results using the shared AppTable component.
+Add the product-creation page and navigation from the existing Products listing.
 
-Follow AGENTS.md and all applicable task prerequisites. Inspect and reuse the actual service, pagination models, table API, and shared button.
+Follow AGENTS.md and all applicable task prerequisites.
 
-Requirements:
-- Load the authenticated user's products when the page opens.
-- Display columns for ID, Title, Price, Stock, and Status.
-- Format prices with two decimal places using a cell template. Do not assume a currency.
-- Display readable English status labels while preserving backend codes in the models.
-- Track rows by product ID.
-- Implement server-side pagination using the existing API contract, with Previous and Next controls.
-- Handle loading, empty results, and errors distinctly.
-- Use an inline loading indicator and leave sidebar navigation available.
-- Provide a retry action for recoverable errors.
-- Prevent stale responses from replacing newer pagination results and clean up subscriptions appropriately.
-- Rely on the existing interceptor and authentication handling.
-- Reuse existing themes, tokens, BEM conventions, and mobile-first styling.
-- Preserve the page header supplied by AppLayout.
+Navigation:
+- Add the shared AppButton above the products table, labeled "New product".
+- Navigate to /app/products/create.
+- Preserve the existing listing, status column, and pagination.
 
-Do not add mock products, client-side ownership filtering, creation forms, edit/delete buttons, new shared components, or backend changes.
+Routing and page:
+- Create a ProductForm page within the products feature, designed for later reuse when editing.
+- Register /app/products/create under the existing guarded application area.
+- Declare mode: "create" in route data.
+- Add pageTitle: "New product" and an appropriate pageSubtitle for the existing layout header.
+- Preserve /app/products as the listing route.
+- Do not register an unfinished edit route or implement edit behavior yet.
 
-Add focused tests for successful rendering, empty results, loading, error/retry, and pagination requests.
+Form:
+- Use reactive forms with title, price, optional description, and stock.
+- Match validation to the existing backend creation contract, inspecting it read-only as needed.
+- Do not expose owner ID or publication status as editable fields.
+- Use English labels and accessible validation feedback.
+- Reuse the shared button, styling tokens, BEM conventions, and existing form patterns.
+- Provide a Cancel action returning to /app/products.
 
-Run relevant tests and the Angular build. Report results and manual steps to verify ownership isolation using two different accounts.
+Keep submission local for now. Do not call the creation endpoint, display fake success, or modify the backend.
+
+Avoid speculative abstractions for editing; keep the form structure ready to initialize from product data later.
+
+Verify navigation and validation, run relevant tests and the Angular build, and report results.

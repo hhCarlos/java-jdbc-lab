@@ -1,5 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter, Router } from '@angular/router';
+import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { OwnedProduct } from './products.models';
 import { Products } from './products';
@@ -14,7 +16,7 @@ describe('Products page', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -32,6 +34,14 @@ describe('Products page', () => {
     };
     return { fixture, element, button };
   }
+
+  it('navigates to creation from the shared button', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const { button } = setup();
+    http.expectOne(url(0)).flush([]);
+    button('New product').click();
+    expect(navigate).toHaveBeenCalledWith(['/app/products/create']);
+  });
 
   it('loads on opening and shows inline loading without empty or error content', () => {
     const { element, button } = setup();

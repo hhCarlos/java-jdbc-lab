@@ -2,6 +2,9 @@
 <ng-template #status let-row>{{ statusLabel(row.statusCode) }}</ng-template>
 
 <section class="products" aria-label="Product listing" [attr.aria-busy]="state().kind === 'loading'">
+  <div class="products__actions">
+    <app-button label="New product" (pressed)="newProduct()" />
+  </div>
   @let current = state();
   @switch (current.kind) {
     @case ('loading') {

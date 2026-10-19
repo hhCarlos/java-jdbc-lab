@@ -20,7 +20,7 @@ describe('Application route protection and logout', () => {
     router.setUpLocationChangeListener();
     harness = await RouterTestingHarness.create();
   });
-  for (const url of ['/app', '/app/products', '/app/profile']) {
+  for (const url of ['/app', '/app/products', '/app/products/create', '/app/profile']) {
     it(`redirects unauthenticated access to ${url}`, async () => {
       await harness.navigateByUrl(url);
       expect(router.url).toBe('/auth/login');

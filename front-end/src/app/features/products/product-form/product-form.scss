@@ -1,0 +1,24 @@
+@use '../../auth/styles/form' as form;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.product-form {
+  @include form.fields;
+
+  max-width: 40rem;
+  color: var(--color-text);
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  &__feedback {
+    margin-top: var(--space-4);
+    color: var(--color-text-muted);
+  }
+}
