@@ -19,7 +19,7 @@ describe('Product form', () => {
     fixture.detectChanges();
     const element: HTMLElement = fixture.nativeElement;
     const input = (field: string, value: string) => {
-      const control = element.querySelector<HTMLInputElement>(`[formControlName="${field}"]`)!;
+      const control = element.querySelector<HTMLInputElement>(`#product-${field}`)!;
       control.value = value;
       control.dispatchEvent(new Event('input'));
     };
@@ -34,8 +34,19 @@ describe('Product form', () => {
     const { element, submit } = setup();
     submit();
     expect(element.querySelectorAll('[aria-invalid="true"]').length).toBe(3);
-    expect(document.activeElement?.getAttribute('formControlName')).toBe('title');
+    expect(document.activeElement?.id).toBe('product-title');
     expect(element.querySelector('#product-title')?.getAttribute('aria-describedby')).toBe('product-title-errors');
+  });
+
+  it('focuses the native price input and preserves exact decimal text and readable errors', () => {
+    const { element, input, submit } = setup();
+    input('title', 'Notebook'); input('price', '0001.2300'); input('stock', '0');
+    submit();
+    expect(document.activeElement?.id).toBe('product-price');
+    expect(element.querySelector<HTMLInputElement>('#product-price')!.value).toBe('0001.2300');
+    expect(element.querySelector('#product-price-errors')?.textContent).toContain('no more than 2 decimal places');
+    expect(element.querySelector('#product-price')?.getAttribute('inputmode')).toBe('decimal');
+    expect(element.querySelector('#product-stock')?.getAttribute('inputmode')).toBe('numeric');
   });
 
   it.each([
@@ -46,7 +57,7 @@ describe('Product form', () => {
     const { element, input, submit } = setup();
     input('title', 'Notebook'); input('price', '0'); input('stock', '0');
     input(field, value); submit();
-    expect(element.querySelector(`[formControlName="${field}"]`)?.getAttribute('aria-invalid')).toBe('true');
+    expect(element.querySelector(`#product-${field}`)?.getAttribute('aria-invalid')).toBe('true');
     expect(element.querySelector('[role="status"]')?.textContent).toBe('');
   });
 

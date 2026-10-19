@@ -1,36 +1,50 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T18:57:29-06:00
+Recorded at: 2026-10-18T19:10:24-06:00
 
 Task prompt:
 
-Add the product-creation page and navigation from the existing Products listing.
+Create a reusable standalone AppInput component and use it to simplify the product-creation form.
 
-Follow AGENTS.md and all applicable task prerequisites.
+Follow AGENTS.md and all applicable task prerequisites. Inspect the existing form controls, validators, error messages, and styling first.
 
-Navigation:
-- Add the shared AppButton above the products table, labeled "New product".
-- Navigate to /app/products/create.
-- Preserve the existing listing, status column, and pagination.
+Component API:
+- Required label and inputId.
+- type: text, email, password, or number; default text.
+- Optional inputMode, placeholder, autocomplete, hint, and pattern.
+- Optional minLength/maxLength for text.
+- Optional min/max/step for numbers.
+- Optional showCounter, default false.
+- Optional custom error-message mapping for application-specific validation errors.
 
-Routing and page:
-- Create a ProductForm page within the products feature, designed for later reuse when editing.
-- Register /app/products/create under the existing guarded application area.
-- Declare mode: "create" in route data.
-- Add pageTitle: "New product" and an appropriate pageSubtitle for the existing layout header.
-- Preserve /app/products as the listing route.
-- Do not register an unfinished edit route or implement edit behavior yet.
+Angular forms integration:
+- Implement ControlValueAccessor so the component works with formControlName.
+- Correctly propagate values, touched state, and disabled state.
+- Programmatic value updates must not emit user-change callbacks.
+- Preserve text values exactly; do not trim, filter characters, or silently round numbers.
+- In number mode, handle empty values without emitting NaN.
+- Generic validation inputs must participate in Angular form validation, including when their configuration changes. Native HTML attributes alone are insufficient for a custom form control.
+- Preserve existing parent-control validators and business rules.
+- Treat pattern as validation, not keystroke filtering.
+- Keep backend validation authoritative.
 
-Form:
-- Use reactive forms with title, price, optional description, and stock.
-- Match validation to the existing backend creation contract, inspecting it read-only as needed.
-- Do not expose owner ID or publication status as editable fields.
-- Use English labels and accessible validation feedback.
-- Reuse the shared button, styling tokens, BEM conventions, and existing form patterns.
-- Provide a Cancel action returning to /app/products.
+Rendering:
+- Centralize the label, native input, hint, counter, and validation feedback.
+- Display errors when the control is invalid and touched or the parent form has been submitted.
+- Support the existing product form's custom validation errors with readable English messages.
+- Associate labels, hints, counters, and errors accessibly.
+- Preserve focus-first-invalid behavior by targeting the actual native input.
+- Reuse theme tokens, semantic status colors, typography, BEM, and mobile-first styling.
 
-Keep submission local for now. Do not call the creation endpoint, display fake success, or modify the backend.
+Migration:
+- Replace only the product form's title, price, and stock fields with AppInput.
+- Keep price and stock in their existing text-based representation and input modes.
+- Preserve all current validation, submission, and Cancel behavior.
+- Leave the description textarea, login, registration, and password checklist unchanged.
+- Remove obsolete duplicated field markup and styles.
 
-Avoid speculative abstractions for editing; keep the form structure ready to initialize from product data later.
+Do not add dependencies, API integration, or backend changes.
 
-Verify navigation and validation, run relevant tests and the Angular build, and report results.
+Add focused tests for form integration, touched/disabled behavior, validation inputs, error visibility, and the optional counter. Update affected product-form tests.
+
+Run relevant tests and the Angular build. Report results and show the simplified product-form template.

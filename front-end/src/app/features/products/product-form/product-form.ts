@@ -1,6 +1,7 @@
 import { Component, ElementRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AppInput } from '../../../shared/app-input/app-input';
 import { AppButton } from '../../../shared/app-button/app-button';
 
 const nonBlank: ValidatorFn = control =>
@@ -21,7 +22,7 @@ type Field = 'title' | 'price' | 'description' | 'stock';
 
 @Component({
   selector: 'app-product-form',
-  imports: [ReactiveFormsModule, AppButton],
+  imports: [ReactiveFormsModule, AppButton, AppInput],
   templateUrl: './product-form.html',
   styleUrl: './product-form.scss',
 })
@@ -36,19 +37,12 @@ export class ProductForm {
     stock: new FormControl('', { nonNullable: true, validators: [Validators.required, decimal(0)] }),
   });
 
-  protected showErrors(field: Field): boolean {
-    const control = this.form.controls[field];
-    return control.invalid && control.touched;
-  }
-
-  protected error(field: Field): string {
-    const control = this.form.controls[field];
-    if (control.hasError('required')) return 'This field is required.';
-    if (control.hasError('maxlength')) return 'Use no more than 50 characters.';
-    return field === 'price'
-      ? 'Enter a price from 0 to 9999999999.99 with no more than 2 decimal places.'
-      : 'Enter a whole number from 0 to 9999999999.';
-  }
+  protected readonly priceErrors = {
+    decimal: 'Enter a price from 0 to 9999999999.99 with no more than 2 decimal places.',
+  };
+  protected readonly stockErrors = {
+    decimal: 'Enter a whole number from 0 to 9999999999.',
+  };
 
   protected submit(): void {
     this.feedback.set('');
@@ -56,7 +50,7 @@ export class ProductForm {
     if (this.form.invalid) {
       const firstInvalid = (Object.keys(this.form.controls) as Field[])
         .find(field => this.form.controls[field].invalid);
-      this.host.nativeElement.querySelector<HTMLElement>(`[formControlName="${firstInvalid}"]`)?.focus();
+      this.host.nativeElement.querySelector<HTMLElement>(`[formControlName="${firstInvalid}"] input, textarea[formControlName="${firstInvalid}"]`)?.focus();
       return;
     }
     this.feedback.set('Saving products is not available yet. Your entries have not been saved.');

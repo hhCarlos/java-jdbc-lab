@@ -1,0 +1,25 @@
+:host { display: block; min-width: 0; }
+
+.app-input {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+
+  &__label { font-weight: var(--font-weight-medium); }
+  &__control {
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+
+    &[aria-invalid='true'] { border-color: var(--color-error-indicator); }
+    &:disabled { opacity: 0.65; cursor: not-allowed; }
+  }
+  &__hint, &__counter { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+  &__errors { color: var(--color-error-text); font-size: var(--font-size-sm); }
+}

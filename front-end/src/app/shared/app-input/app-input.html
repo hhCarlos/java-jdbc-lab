@@ -1,0 +1,23 @@
+<div class="app-input">
+  <label class="app-input__label" [for]="inputId">{{ label }}</label>
+  @if (hint) {
+    <p class="app-input__hint" [id]="inputId + '-hint'">{{ hint }}</p>
+  }
+  <input class="app-input__control" [id]="inputId" [type]="type" [value]="value ?? ''"
+    [disabled]="disabled" [required]="required"
+    [attr.inputmode]="inputMode" [attr.placeholder]="placeholder" [attr.autocomplete]="autocomplete"
+    [attr.pattern]="pattern" [attr.minlength]="type !== 'number' ? minLength : null"
+    [attr.maxlength]="type !== 'number' ? maxLength : null"
+    [attr.min]="type === 'number' ? min : null" [attr.max]="type === 'number' ? max : null"
+    [attr.step]="type === 'number' ? step : null"
+    [attr.aria-invalid]="showErrors ? 'true' : null" [attr.aria-describedby]="descriptions"
+    (input)="update($event)" (blur)="touch()" />
+  @if (showCounter) {
+    <p class="app-input__counter" [id]="inputId + '-counter'">{{ count }}{{ maxLength !== undefined ? ' / ' + maxLength : '' }} characters</p>
+  }
+  @if (showErrors) {
+    <div class="app-input__errors" [id]="inputId + '-errors'" aria-live="polite">
+      @for (message of messages; track $index) { <p>{{ message }}</p> }
+    </div>
+  }
+</div>

@@ -1,4 +1,4 @@
-@use '../../auth/styles/form' as form;
+@use '../../../../styles/abstracts' as styles;
 
 :host {
   display: block;
@@ -6,7 +6,24 @@
 }
 
 .product-form {
-  @include form.fields;
+  &__instructions { color: var(--color-text-muted); }
+  &__instructions, &__form { margin-top: var(--space-4); }
+  &__form, &__field { display: grid; gap: var(--space-2); }
+  &__form { gap: var(--space-6); }
+  &__label { font-weight: var(--font-weight-medium); }
+  &__input {
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  @include styles.respond(md) {
+    &__form { margin-top: var(--space-6); }
+  }
 
   max-width: 40rem;
   color: var(--color-text);
