@@ -3,8 +3,10 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { FormGroupDirective } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { BehaviorSubject } from 'rxjs';
+import { ProductsService } from '../products.service';
 import { vi } from 'vitest';
 import { routes } from '../../../app.routes';
 import { SessionService } from '../../auth/session.service';
@@ -50,6 +52,77 @@ describe('Product form', () => {
     const form = fixture.debugElement.query(By.directive(FormGroupDirective)).injector.get(FormGroupDirective).form;
     return { fixture, element, input, submit, button, form };
   }
+
+  function editSetup(id: string | null, mode = 'edit') {
+    const data = new BehaviorSubject({ mode });
+    const paramMap = new BehaviorSubject(convertToParamMap(id === null ? {} : { id }));
+    TestBed.overrideProvider(ActivatedRoute, { useValue: { data, paramMap } });
+    return { ...setup(), data, paramMap };
+  }
+
+  it.each(['1', '9007199254740993', '9223372036854775807'])('disables edit mode for valid ID %s and blocks programmatic creation', id => {
+    const { fixture, element, form, submit, button } = editSetup(id);
+    const create = vi.spyOn(TestBed.inject(ProductsService), 'create');
+    expect(fixture.componentInstance['mode']()).toBe('edit');
+    expect(fixture.componentInstance['productId']()).toBe(id);
+    expect(element.textContent).toContain('Editing products is not available yet.');
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(form.disabled).toBe(true);
+    expect(Array.from(element.querySelectorAll<HTMLInputElement>('input, textarea')).every(input => input.disabled)).toBe(true);
+    expect(button('Save changes').disabled).toBe(true);
+    // Even bypassing disabled controls must never turn edit submission into creation.
+    form.enable();
+    form.setValue({ title: 'Valid', price: '1', description: '', stock: '1' });
+    submit();
+    fixture.componentInstance['submit']();
+    expect(create).not.toHaveBeenCalled();
+    TestBed.inject(HttpTestingController).expectNone(() => true);
+  });
+
+  it.each([null, '', '0', '-1', '1.5', '1e2', 'abc', ' 1', '9223372036854775808'])('rejects invalid edit ID %s', id => {
+    const { fixture, element, submit, button } = editSetup(id);
+    expect(fixture.componentInstance['productId']()).toBeNull();
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain('Invalid product ID');
+    expect(button('Save changes').disabled).toBe(true);
+    submit();
+    TestBed.inject(HttpTestingController).expectNone(() => true);
+  });
+
+  it('uses route data for mode and responds to reused route changes', () => {
+    const { fixture, data, paramMap, form, element } = editSetup('bad', 'create');
+    expect(fixture.componentInstance['mode']()).toBe('create');
+    expect(form.enabled).toBe(true);
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    data.next({ mode: 'edit' });
+    fixture.detectChanges();
+    expect(form.disabled).toBe(true);
+    expect(element.querySelector('[role="alert"]')).not.toBeNull();
+    paramMap.next(convertToParamMap({ id: '42' }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance['productId']()).toBe('42');
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    data.next({ mode: 'create' });
+    expect(form.enabled).toBe(true);
+    expect(fixture.componentInstance['productId']()).toBeNull();
+  });
+
+  it('keeps Cancel navigation available in edit mode', () => {
+    const { button } = editSetup('42');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    button('Cancel').click();
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
+  });
+
+  it('opens the edit route with its metadata and the existing form', async () => {
+    TestBed.inject(SessionService).establish({ accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
+    const harness = await RouterTestingHarness.create('/app/products/edit/42');
+    expect(harness.routeNativeElement?.querySelector('app-product-form')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Edit product');
+    const route = TestBed.inject(Router).routerState.snapshot.root.firstChild!.firstChild!;
+    expect(route.data).toEqual({ mode: 'edit', pageTitle: 'Edit product', pageSubtitle: 'Update your product details.' });
+    expect(harness.routeNativeElement?.textContent).toContain('Editing products is not available yet.');
+    TestBed.inject(HttpTestingController).expectNone(() => true);
+  });
 
   it('shows accessible required errors and focuses the first invalid field', () => {
     const { element, submit } = setup();

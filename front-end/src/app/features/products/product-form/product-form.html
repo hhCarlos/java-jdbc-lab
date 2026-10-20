@@ -1,5 +1,12 @@
-<section class="product-form" aria-label="New product details">
-  <p class="product-form__instructions">All fields except description are required.</p>
+<section class="product-form" [attr.aria-label]="mode() === 'edit' ? 'Edit product details' : 'New product details'">
+  @if (mode() === 'edit') {
+    <p role="status">Editing products is not available yet.</p>
+    @if (editError(); as error) {
+      <p role="alert">{{ error }}</p>
+    }
+  } @else {
+    <p class="product-form__instructions">All fields except description are required.</p>
+  }
   <form class="product-form__form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="submitting()" novalidate>
     <app-input label="Title" inputId="product-title" formControlName="title" />
     <app-input label="Price" inputId="product-price" formControlName="price"
@@ -11,8 +18,8 @@
     <app-input label="Stock" inputId="product-stock" formControlName="stock"
       inputMode="numeric" [errorMessages]="stockErrors" />
     <div class="product-form__actions">
-      <app-button label="Create product" status="success" variant="ghost" type="submit"
-        [disabled]="form.invalid || form.pending || submitting()" />
+      <app-button [label]="mode() === 'edit' ? 'Save changes' : 'Create product'" status="success" variant="ghost" type="submit"
+        [disabled]="mode() === 'edit' || form.invalid || form.pending || submitting()" />
       <app-button label="Cancel" status="error" variant="ghost" (pressed)="cancel()" />
     </div>
   </form>

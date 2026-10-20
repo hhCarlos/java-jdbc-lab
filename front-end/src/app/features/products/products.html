@@ -1,6 +1,10 @@
 <ng-template #price let-row>{{ row.price | number:'1.2-2' }}</ng-template>
 <ng-template #status let-row>{{ statusLabel(row.statusCode) }}</ng-template>
 
+<ng-template #actions let-row>
+  <app-button label="Edit" icon="edit" variant="ghost" (pressed)="editProduct(row.id)" />
+</ng-template>
+
 <section class="products" aria-label="Product listing" [attr.aria-busy]="state().kind === 'loading'">
   <div class="products__actions">
     <app-button label="New product" variant="ghost" (pressed)="newProduct()" />
@@ -19,7 +23,7 @@
       </div>
     }
     @case ('ready') {
-      <app-table [rows]="current.rows" [columns]="columns()" rowKey="id"
+      <app-table [rows]="current.rows" [columns]="columns()" rowKey="id" [actionsTemplate]="actions"
         [emptyMessage]="current.page === 0 ? 'No products yet.' : 'No products on this page.'" />
     }
   }

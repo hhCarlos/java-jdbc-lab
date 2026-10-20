@@ -28,6 +28,10 @@ export class Products {
     void this.router.navigate(['/app/products/create']);
   }
 
+  protected editProduct(productId: number): void {
+    void this.router.navigate(['/app/products/edit', productId]);
+  }
+
   private readonly service = inject(ProductsService);
   private readonly requests = new BehaviorSubject<number>(0);
   protected readonly pageSize = 20;

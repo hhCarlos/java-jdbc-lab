@@ -1,11 +1,11 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { defer, finalize } from 'rxjs';
+import { combineLatest, defer, finalize } from 'rxjs';
 import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
 import { CreateProductRequest } from '../products.models';
 import { ProductsService } from '../products.service';
 import { Component, DestroyRef, ElementRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AppInput } from '../../../shared/app-input/app-input';
 import { AppModal } from '../../../shared/app-modal/app-modal';
 import { AppButton } from '../../../shared/app-button/app-button';
@@ -33,6 +33,11 @@ type Field = 'title' | 'price' | 'description' | 'stock';
   styleUrl: './product-form.scss',
 })
 export class ProductForm {
+  private readonly route = inject(ActivatedRoute);
+  protected readonly mode = signal<'create' | 'edit'>('create');
+  // Preserve signed 64-bit IDs as text rather than rounding them to a JS number.
+  protected readonly productId = signal<string | null>(null);
+  protected readonly editError = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly service = inject(ProductsService);
@@ -54,8 +59,25 @@ export class ProductForm {
     decimal: 'Enter a whole number from 0 to 9999999999.',
   };
 
+  constructor() {
+    combineLatest([this.route.data, this.route.paramMap]).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(([data, params]) => {
+      const mode = data['mode'] === 'edit' ? 'edit' : 'create';
+      this.mode.set(mode);
+      const id = params.get('id');
+      const validId = id !== null && /^[0-9]+$/.test(id)
+        && BigInt(id) > 0n && BigInt(id) <= 9_223_372_036_854_775_807n;
+      this.productId.set(mode === 'edit' && validId ? id : null);
+      this.editError.set(mode === 'edit' && !validId
+        ? 'Invalid product ID. Enter a positive 64-bit integer product ID.' : null);
+      if (mode === 'edit') this.form.disable();
+      else this.form.enable();
+    });
+  }
+
   protected submit(): void {
-    if (this.submitting()) return;
+    if (this.mode() !== 'create' || this.submitting()) return;
     this.form.markAllAsTouched();
     if (this.form.pending) return;
     if (this.form.invalid) {

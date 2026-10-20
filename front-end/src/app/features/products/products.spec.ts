@@ -43,6 +43,18 @@ describe('Products page', () => {
     expect(navigate).toHaveBeenCalledWith(['/app/products/create']);
   });
 
+  it('navigates to the selected product from its shared Edit action', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const { fixture, element } = setup();
+    http.expectOne(url(0)).flush([product(12), product(34)]);
+    fixture.detectChanges();
+    const actions = element.querySelectorAll<HTMLButtonElement>('tbody app-button button');
+    expect(actions).toHaveLength(2);
+    expect(element.querySelector('tbody app-icon')).not.toBeNull();
+    actions[1].click();
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products/edit', 34]);
+  });
+
   it('loads on opening and shows inline loading without empty or error content', () => {
     const { element, button } = setup();
     expect(element.querySelector('[role="status"]')?.textContent).toContain('Loading products');
@@ -61,13 +73,13 @@ describe('Products page', () => {
     http.expectOne(url(0)).flush(rows);
     fixture.detectChanges();
     expect(Array.from(element.querySelectorAll('th'), header => header.textContent?.trim()))
-      .toEqual(['ID', 'Title', 'Price', 'Stock', 'Status']);
+      .toEqual(['ID', 'Title', 'Price', 'Stock', 'Status', 'Actions']);
     const cells = Array.from(element.querySelectorAll('tbody tr'), row =>
       Array.from(row.querySelectorAll('td'), cell => cell.textContent?.trim()));
     expect(cells).toEqual([
-      ['1', 'Item 1', '12.50', '0', 'Active'],
-      ['2', 'Item 2', '0.00', '0', 'Inactive'],
-      ['3', 'Item 3', '12.50', '0', 'Unknown status'],
+      ['1', 'Item 1', '12.50', '0', 'Active', 'Edit'],
+      ['2', 'Item 2', '0.00', '0', 'Inactive', 'Edit'],
+      ['3', 'Item 3', '12.50', '0', 'Unknown status', 'Edit'],
     ]);
     expect(rows[1].statusCode).toBe('INACTIVE');
     expect(element.querySelector('h1')).toBeNull();
@@ -81,7 +93,7 @@ describe('Products page', () => {
     fixture.detectChanges();
     const empty = element.querySelector('tbody td')!;
     expect(empty.textContent?.trim()).toBe('No products yet.');
-    expect(empty.getAttribute('colspan')).toBe('5');
+    expect(empty.getAttribute('colspan')).toBe('6');
     expect(button('Next').disabled).toBe(true);
     expect(element.querySelector('[role="alert"]')).toBeNull();
   });

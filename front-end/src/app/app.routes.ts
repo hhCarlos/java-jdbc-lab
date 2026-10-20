@@ -20,6 +20,15 @@ export const routes: Routes = [
         },
       },
       {
+        path: 'products/edit/:id',
+        loadComponent: () => import('./features/products/product-form/product-form').then(m => m.ProductForm),
+        data: {
+          mode: 'edit',
+          pageTitle: 'Edit product',
+          pageSubtitle: 'Update your product details.',
+        },
+      },
+      {
         path: 'products',
         loadComponent: () => import('./features/products/products').then(m => m.Products),
         data: {
