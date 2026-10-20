@@ -2,37 +2,43 @@
 
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T18:42:33-06:00
+Recorded at: 2026-10-19T18:51:55-06:00
 
 ## Task prompt
 
-This is /front-end only. Extend the existing shared AppButton with semantic statuses and a ghost variant.
+Create a reusable standalone AppModal component in the frontend shared component structure.
 
-Follow AGENTS.md and all applicable task prerequisites. Inspect the current component and semantic theme tokens first.
+Follow AGENTS.md and all applicable task prerequisites.
 
 Public API:
-- status: "default" | "success" | "error" | "warning", default "default".
-- variant: "solid" | "ghost", default "solid".
-- Preserve all existing inputs, outputs, icon positions, native button behavior, and accessibility.
+- open: controls whether the modal is displayed.
+- title: required.
+- subtitle: optional.
+- closed: output notifying the parent when the user requests closing.
+- Project arbitrary body content through ng-content. Do not hardcode forms or actions.
 
-Appearance:
-- Keep the current brand-red appearance for default solid buttons.
-- Use semantic status tokens for success, error, and warning.
-- Ghost buttons have a transparent background, with text and border using the selected status color.
-- Icons inherit the text color.
-- Provide consistent hover, active, focus-visible, and disabled styles.
-- Ensure readable text and visible borders in both light and dark themes. Do not assume white text works on bright success or warning backgrounds.
-- Add missing semantic tokens to the existing theme system rather than hardcoding colors in component styles.
-- Keep disabled behavior independent of status and variant.
-- Follow existing BEM conventions.
+Behavior:
+- Prefer the native dialog element opened with showModal() for modal behavior without adding dependencies.
+- Synchronize native dialog state with the open input.
+- Block interaction with the underlying application while open.
+- Close on Escape.
+- Include a native close button aligned with the title, with the accessible label "Close dialog".
+- Notify the parent on dismissal so its open state stays synchronized.
+- Do not close when clicking the backdrop.
+- Keep keyboard focus inside the modal and restore focus to the triggering element when it closes.
+- Prevent background scrolling while open and restore the previous state on close or destruction.
 
-Statuses are visual intent; they must not automatically trigger actions, loading, or success/error messages.
+Structure and styling:
+- Header containing title, optional subtitle, and close button.
+- Body containing projected content.
+- Associate the dialog accessibly with its title and subtitle.
+- Center it with responsive width and viewport margins.
+- Allow long content to scroll without hiding the close button.
+- Reuse existing theme, spacing, typography, and layering conventions.
+- Follow BEM naming and support light/dark themes.
 
-Do not replace existing form buttons or modify product-form behavior in this task.
+Do not integrate the modal into existing pages or modify the backend.
 
-Run affected existing tests and the Angular build. Verify all status/variant combinations in both themes, and report what was actually checked.
+Verify opening, Escape dismissal, close-button behavior, focus restoration, and scrolling cleanup. Run relevant tests and the Angular build.
 
-Document examples:
-<app-button label="Save" status="success" />
-<app-button label="Delete" status="error" variant="ghost" />
-<app-button label="Review" status="warning" variant="ghost" />
+Document a minimal parent-component example controlling open and handling closed, with projected content.

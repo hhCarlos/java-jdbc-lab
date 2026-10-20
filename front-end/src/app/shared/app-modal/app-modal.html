@@ -1,0 +1,16 @@
+<dialog #dialog class="app-modal" [attr.aria-labelledby]="titleId"
+  [attr.aria-describedby]="subtitle() ? subtitleId : null"
+  (cancel)="dismiss($event)" (close)="nativeClosed()">
+  <header class="app-modal__header">
+    <div class="app-modal__heading">
+      <h2 class="app-modal__title" [id]="titleId">{{ title() }}</h2>
+      @if (subtitle()) {
+        <p class="app-modal__subtitle" [id]="subtitleId">{{ subtitle() }}</p>
+      }
+    </div>
+    <button class="app-modal__close" type="button" aria-label="Close dialog" (click)="dismiss()">
+      <span aria-hidden="true">×</span>
+    </button>
+  </header>
+  <div class="app-modal__body"><ng-content /></div>
+</dialog>
