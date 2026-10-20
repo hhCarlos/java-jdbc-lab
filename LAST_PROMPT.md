@@ -1,50 +1,38 @@
+# Latest task prompt
+
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-18T19:10:24-06:00
+Recorded at: 2026-10-19T18:42:33-06:00
 
-Task prompt:
+## Task prompt
 
-Create a reusable standalone AppInput component and use it to simplify the product-creation form.
+This is /front-end only. Extend the existing shared AppButton with semantic statuses and a ghost variant.
 
-Follow AGENTS.md and all applicable task prerequisites. Inspect the existing form controls, validators, error messages, and styling first.
+Follow AGENTS.md and all applicable task prerequisites. Inspect the current component and semantic theme tokens first.
 
-Component API:
-- Required label and inputId.
-- type: text, email, password, or number; default text.
-- Optional inputMode, placeholder, autocomplete, hint, and pattern.
-- Optional minLength/maxLength for text.
-- Optional min/max/step for numbers.
-- Optional showCounter, default false.
-- Optional custom error-message mapping for application-specific validation errors.
+Public API:
+- status: "default" | "success" | "error" | "warning", default "default".
+- variant: "solid" | "ghost", default "solid".
+- Preserve all existing inputs, outputs, icon positions, native button behavior, and accessibility.
 
-Angular forms integration:
-- Implement ControlValueAccessor so the component works with formControlName.
-- Correctly propagate values, touched state, and disabled state.
-- Programmatic value updates must not emit user-change callbacks.
-- Preserve text values exactly; do not trim, filter characters, or silently round numbers.
-- In number mode, handle empty values without emitting NaN.
-- Generic validation inputs must participate in Angular form validation, including when their configuration changes. Native HTML attributes alone are insufficient for a custom form control.
-- Preserve existing parent-control validators and business rules.
-- Treat pattern as validation, not keystroke filtering.
-- Keep backend validation authoritative.
+Appearance:
+- Keep the current brand-red appearance for default solid buttons.
+- Use semantic status tokens for success, error, and warning.
+- Ghost buttons have a transparent background, with text and border using the selected status color.
+- Icons inherit the text color.
+- Provide consistent hover, active, focus-visible, and disabled styles.
+- Ensure readable text and visible borders in both light and dark themes. Do not assume white text works on bright success or warning backgrounds.
+- Add missing semantic tokens to the existing theme system rather than hardcoding colors in component styles.
+- Keep disabled behavior independent of status and variant.
+- Follow existing BEM conventions.
 
-Rendering:
-- Centralize the label, native input, hint, counter, and validation feedback.
-- Display errors when the control is invalid and touched or the parent form has been submitted.
-- Support the existing product form's custom validation errors with readable English messages.
-- Associate labels, hints, counters, and errors accessibly.
-- Preserve focus-first-invalid behavior by targeting the actual native input.
-- Reuse theme tokens, semantic status colors, typography, BEM, and mobile-first styling.
+Statuses are visual intent; they must not automatically trigger actions, loading, or success/error messages.
 
-Migration:
-- Replace only the product form's title, price, and stock fields with AppInput.
-- Keep price and stock in their existing text-based representation and input modes.
-- Preserve all current validation, submission, and Cancel behavior.
-- Leave the description textarea, login, registration, and password checklist unchanged.
-- Remove obsolete duplicated field markup and styles.
+Do not replace existing form buttons or modify product-form behavior in this task.
 
-Do not add dependencies, API integration, or backend changes.
+Run affected existing tests and the Angular build. Verify all status/variant combinations in both themes, and report what was actually checked.
 
-Add focused tests for form integration, touched/disabled behavior, validation inputs, error visibility, and the optional counter. Update affected product-form tests.
-
-Run relevant tests and the Angular build. Report results and show the simplified product-form template.
+Document examples:
+<app-button label="Save" status="success" />
+<app-button label="Delete" status="error" variant="ghost" />
+<app-button label="Review" status="warning" variant="ghost" />

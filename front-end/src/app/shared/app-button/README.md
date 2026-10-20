@@ -10,6 +10,8 @@ standalone component's `imports` array.
 | `iconPosition` | `'left' \| 'right' \| 'top' \| 'bottom'` | `'left'` |
 | `disabled` | `boolean` | `false` |
 | `type` | `'button' \| 'submit' \| 'reset'` | `'button'` |
+| `status` | `'default' \| 'success' \| 'error' \| 'warning'` | `'default'` |
+| `variant` | `'solid' \| 'ghost'` | `'solid'` |
 | `pressed` | Output emitting the original `MouseEvent` | — |
 
 ```html
@@ -39,3 +41,18 @@ use a vertical layout with matching DOM order.
 Brand, foreground, hover, active, focus, and disabled colors use existing semantic
 tokens for light and dark themes. Spacing, radius, and typography also use the
 shared tokens. Long labels wrap within the available width.
+
+## Semantic appearance
+
+```html
+<app-button label="Save" status="success" />
+<app-button label="Delete" status="error" variant="ghost" />
+<app-button label="Review" status="warning" variant="ghost" />
+```
+
+Status expresses visual intent only; it never triggers actions, loading, or
+messages. Solid default buttons retain brand red. Semantic fills use paired
+foreground tokens, including dark text on bright warning and dark-theme fills.
+Ghost buttons stay transparent and use status text colors for text and borders,
+including hover and active states. All combinations share the focus-visible
+outline and neutral disabled styling and behavior.

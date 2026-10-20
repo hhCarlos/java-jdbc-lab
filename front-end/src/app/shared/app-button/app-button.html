@@ -1,5 +1,9 @@
 <button
   class="app-button"
+  [class.app-button--success]="status() === 'success'"
+  [class.app-button--error]="status() === 'error'"
+  [class.app-button--warning]="status() === 'warning'"
+  [class.app-button--ghost]="variant() === 'ghost'"
   [class.app-button--vertical]="icon() && (iconPosition() === 'top' || iconPosition() === 'bottom')"
   [type]="type()"
   [disabled]="disabled()"

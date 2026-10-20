@@ -130,3 +130,9 @@ creates the base stacking context, containing all routed layers. Keep `html`,
 isolation, and positioned z-index that could trap the fixed overlay. Native
 browser top-layer elements (such as `showModal()` dialogs) sit above application
 z-index; do not introduce them without coordinating with the blocking loader.
+
+Semantic actions use `--color-{success,error,warning}-action` with `-hover`
+and `-active` companions and paired `--color-on-{status}-action` foregrounds.
+These are distinct from graphical indicators. Warning ghost text uses
+`--color-warning-text`, `--color-warning-text-hover`, and
+`--color-warning-text-active` for contrast on theme surfaces.

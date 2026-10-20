@@ -5,16 +5,42 @@
 }
 
 .app-button {
+  --button-fill: var(--color-primary);
+  --button-hover: var(--color-action-hover);
+  --button-active: var(--color-action-active);
+  --button-on-fill: var(--color-on-primary);
+  --button-ink: var(--color-link);
+  --button-ink-hover: var(--color-link-hover);
+  --button-ink-active: var(--color-link-hover);
+
+  @each $status in success, error, warning {
+    &--#{$status} {
+      --button-fill: var(--color-#{$status}-action);
+      --button-hover: var(--color-#{$status}-action-hover);
+      --button-active: var(--color-#{$status}-action-active);
+      --button-on-fill: var(--color-on-#{$status}-action);
+      --button-ink: var(--color-#{$status}-action);
+      --button-ink-hover: var(--color-#{$status}-action-hover);
+      --button-ink-active: var(--color-#{$status}-action-active);
+    }
+  }
+
+  &--warning {
+    --button-ink: var(--color-warning-text);
+    --button-ink-hover: var(--color-warning-text-hover);
+    --button-ink-active: var(--color-warning-text-active);
+  }
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   max-width: 100%;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid transparent;
+  border: 1px solid var(--button-ink);
   border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--button-fill);
+  color: var(--button-on-fill);
   font-family: var(--font-body);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
@@ -32,11 +58,31 @@
   }
 
   &:hover:not(:disabled) {
-    background: var(--color-action-hover);
+    background: var(--button-hover);
+    border-color: var(--button-ink-hover);
   }
 
   &:active:not(:disabled) {
-    background: var(--color-action-active);
+    background: var(--button-active);
+    border-color: var(--button-ink-active);
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--button-ink);
+    border-color: currentColor;
+
+    &:hover:not(:disabled) {
+      background: transparent;
+      color: var(--button-ink-hover);
+      border-color: currentColor;
+    }
+
+    &:active:not(:disabled) {
+      background: transparent;
+      color: var(--button-ink-active);
+      border-color: currentColor;
+    }
   }
 
   &:focus-visible {
@@ -45,7 +91,7 @@
   }
 
   &:disabled {
-    border-color: var(--color-border);
+    border-color: var(--color-border-strong);
     background: var(--color-background);
     color: var(--color-text-muted);
     cursor: not-allowed;

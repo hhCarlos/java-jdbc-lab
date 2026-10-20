@@ -3,7 +3,7 @@
 
 <section class="products" aria-label="Product listing" [attr.aria-busy]="state().kind === 'loading'">
   <div class="products__actions">
-    <app-button label="New product" (pressed)="newProduct()" />
+    <app-button label="New product" variant="ghost" (pressed)="newProduct()" />
   </div>
   @let current = state();
   @switch (current.kind) {

@@ -11,8 +11,8 @@
     <app-input label="Stock" inputId="product-stock" formControlName="stock"
       inputMode="numeric" [errorMessages]="stockErrors" />
     <div class="product-form__actions">
-      <app-button label="Create product" type="submit" />
-      <app-button label="Cancel" (pressed)="cancel()" />
+      <app-button label="Create product" status="success" variant="ghost" type="submit" />
+      <app-button label="Cancel" status="error" variant="ghost" (pressed)="cancel()" />
     </div>
   </form>
   <p class="product-form__feedback" role="status" aria-live="polite">{{ feedback() }}</p>

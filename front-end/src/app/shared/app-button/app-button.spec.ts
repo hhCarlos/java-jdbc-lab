@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { AppButton, ButtonIconPosition, ButtonType } from './app-button';
+import { AppButton, ButtonIconPosition, ButtonType, ButtonStatus, ButtonVariant } from './app-button';
 
 function setup() {
   const fixture = TestBed.createComponent(AppButton);
@@ -10,10 +10,40 @@ function setup() {
 }
 
 describe('AppButton', () => {
+  const appearances = (['default', 'success', 'error', 'warning'] satisfies ButtonStatus[])
+    .flatMap(status => (['solid', 'ghost'] satisfies ButtonVariant[])
+      .map(variant => ({ status, variant })));
+
+  it.each(appearances)('applies $status/$variant without side effects and preserves disabled activation', ({ status, variant }) => {
+    const { fixture, button } = setup();
+    const pressed = vi.fn();
+    fixture.componentInstance.pressed.subscribe(pressed);
+    fixture.componentRef.setInput('status', status);
+    fixture.componentRef.setInput('variant', variant);
+    fixture.detectChanges();
+    for (const semantic of ['success', 'error', 'warning']) {
+      expect(button.classList.contains(`app-button--${semantic}`)).toBe(status === semantic);
+    }
+    expect(button.classList.contains('app-button--ghost')).toBe(variant === 'ghost');
+    expect(button.textContent?.trim()).toBe('Save');
+    expect(pressed).not.toHaveBeenCalled();
+    button.click();
+    expect(pressed).toHaveBeenCalledOnce();
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+    pressed.mockClear();
+    button.click();
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(button.disabled).toBe(true);
+    expect(pressed).not.toHaveBeenCalled();
+  });
+
   it('renders text only without creating an icon or fallback and defaults to an enabled button', () => {
     const { fixture, button } = setup();
     expect(button.textContent?.trim()).toBe('Save');
     expect(button.type).toBe('button');
+    expect(fixture.componentInstance.status()).toBe('default');
+    expect(fixture.componentInstance.variant()).toBe('solid');
     expect(button.disabled).toBe(false);
     expect(button.querySelector('app-icon')).toBeNull();
     expect(button.querySelector('use')).toBeNull();

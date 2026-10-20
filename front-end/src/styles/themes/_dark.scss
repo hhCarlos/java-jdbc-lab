@@ -19,4 +19,21 @@ html[data-theme='dark'] {
   --color-on-success-indicator: hsl(225 15% 9%);
   --color-success-text: hsl(110 80% 75%);
   --color-error-text: hsl(0 90% 80%);
+
+  // Semantic action fills and their readable foregrounds.
+  --color-success-action: hsl(110 70% 65%);
+  --color-success-action-hover: hsl(110 70% 72%);
+  --color-success-action-active: hsl(110 70% 78%);
+  --color-on-success-action: hsl(225 15% 9%);
+  --color-error-action: hsl(0 90% 75%);
+  --color-error-action-hover: hsl(0 90% 80%);
+  --color-error-action-active: hsl(0 90% 85%);
+  --color-on-error-action: hsl(225 15% 9%);
+  --color-warning-action: hsl(42 100% 60%);
+  --color-warning-action-hover: hsl(42 100% 68%);
+  --color-warning-action-active: hsl(42 100% 75%);
+  --color-on-warning-action: hsl(225 15% 9%);
+  --color-warning-text: hsl(42 100% 75%);
+  --color-warning-text-hover: hsl(42 100% 82%);
+  --color-warning-text-active: hsl(42 100% 88%);
 }
