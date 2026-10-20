@@ -1,45 +1,37 @@
-# Task prompt
+# Latest task prompt
 
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T20:06:43-06:00
+Recorded at: 2026-10-19T20:35:08-06:00
 
 ## Task prompt
 
-Load the selected product into the existing ProductForm edit page. Limit implementation changes to front-end/ and the task record required by AGENTS.md.
+Add an owner-scoped product update operation to the existing backend repository.
 
-Follow AGENTS.md and all applicable task prerequisites.
+Follow AGENTS.md and all applicable database rules. Inspect the existing repository abstraction, JDBC implementation, product models, and status lookup conventions.
 
-ProductsService:
-- Add or reuse getById() calling GET /api/users/me/products/{id}.
-- Use typed models matching the existing backend response.
-- Rely on the existing authentication interceptor.
-- Return an Observable and preserve HTTP errors.
+Requirements:
+- Extend the existing repository rather than creating a parallel implementation.
+- Accept product ID, owner user ID, replacement title, price, optional description, stock, and the target status code supplied by the application layer.
+- Use BigDecimal for price and existing types for IDs and stock.
+- Update editable fields and status together in one parameterized SQL statement.
+- Resolve the target status through its stable code using existing conventions.
+- Include product ID, owner user ID, and allowed current statuses in the UPDATE conditions.
+- Only ACTIVE and INACTIVE products may be updated. Never update or restore DELETED products.
+- Preserve product ID and ownership.
+- Treat a null description as clearing the stored description.
+- Do not insert when no matching product exists.
+- Return an affected-row result allowing the application layer to distinguish a successful update from no matching product.
+- Leave business validation and the decision about the target status to the application layer.
 
-Edit flow:
-- Preserve the table's existing Edit navigation to /app/products/edit/{id}.
-- Fetch the product from ProductForm using the validated route ID, not from the table click handler.
-- Request data only in edit mode.
-- Populate title, price, description, and stock using the existing form-control representations without silently rounding values.
-- Mark the populated form pristine and untouched.
-- Handle route-ID changes without letting stale responses overwrite the current product.
-- Clean up subscriptions and loading state on completion or cancellation.
-- Preserve dirty-form Cancel confirmation.
+Do not add services, controllers, frontend changes, migrations, or automatic commits.
 
-Loading and errors:
-- Do not allow editing before loading succeeds.
-- Show loading feedback using existing conventions.
-- For 404, show an English product-unavailable message and a way back to Products.
-- For other recoverable failures, show feedback and allow retry.
-- Preserve existing authentication-expiry handling.
+Add focused repository tests covering:
+- Updating all supplied fields and status.
+- Clearing the description.
+- Ownership isolation.
+- Missing and deleted products remaining unchanged.
+- Updating inactive products.
+- An invalid target status failing without partially changing product data.
 
-Saving edits is not implemented yet:
-- Keep edit submission disabled.
-- Never call create() from edit mode.
-- Preserve the complete creation flow unchanged.
-
-Do not change backend code or add update requests.
-
-Add focused tests for the GET request, form population, missing products, loading/error recovery, create-mode isolation, and preventing creation from edit mode.
-
-Run relevant frontend tests and the Angular build. Report results and manual verification steps.
+Run relevant tests using the existing isolated database setup. Report results, show the final SQL and parameter order, and distinguish Oracle verification from H2 or mocked tests.

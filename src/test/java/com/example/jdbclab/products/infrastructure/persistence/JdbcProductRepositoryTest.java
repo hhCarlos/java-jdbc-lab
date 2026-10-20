@@ -222,4 +222,79 @@ class JdbcProductRepositoryTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isZero();
     }
 
+    @Test
+    void updatesAllFieldsAndStatusUsingStableCodesAndPreservesIdentityAndOwnership() {
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 11, "ACTIVE");
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 22, "INACTIVE");
+        long id = insert(1, "ACTIVE", 7, "Old description");
+        String description = "CLOB with ' and ? ".repeat(1000);
+        assertThat(repository.update(id, 1L, "Replacement ' ?", new BigDecimal("123.45"),
+                description, 9999999999L, "INACTIVE")).isEqualTo(1);
+        assertThat(repository.findByIdAndOwnerId(id, 1L)).contains(new OwnedProduct(
+                id, "Replacement ' ?", new BigDecimal("123.45"), description, 9999999999L, "INACTIVE"));
+        assertThat(jdbc.queryForObject("SELECT user_id FROM products WHERE id = ?", Long.class, id)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT status_id FROM products WHERE id = ?", Long.class, id)).isEqualTo(22L);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isEqualTo(1L);
+    }
+
+    @Test
+    void updatesInactiveProductAndClearsDescriptionWithoutInferringStatusFromStock() {
+        long id = insert(1, "INACTIVE", 4, "Clear this");
+        assertThat(repository.update(id, 1L, "Updated", new BigDecimal("0.00"), null, 0, "ACTIVE")).isEqualTo(1);
+        assertThat(repository.findByIdAndOwnerId(id, 1L)).contains(new OwnedProduct(
+                id, "Updated", new BigDecimal("0.00"), null, 0, "ACTIVE"));
+    }
+
+    @Test
+    void cannotUpdateAnotherOwnersProduct() {
+        long id = insert(2, "ACTIVE", 3, "Original");
+        var before = repository.findByIdAndOwnerId(id, 2L);
+        assertThat(repository.update(id, 1L, "Changed", BigDecimal.ONE, null, 0, "INACTIVE")).isZero();
+        assertThat(repository.findByIdAndOwnerId(id, 2L)).isEqualTo(before);
+        assertThat(jdbc.queryForObject("SELECT user_id FROM products WHERE id = ?", Long.class, id)).isEqualTo(2L);
+    }
+
+    @Test
+    void missingAndDeletedProductsAreNeverUpdatedOrInserted() {
+        long id = insert(1, "DELETED", 8, "Keep this");
+        for (String status : new String[]{"ACTIVE", "INACTIVE", "DELETED"}) {
+            assertThat(repository.update(id, 1L, "Changed", BigDecimal.ONE, null, 0, status)).isZero();
+            assertThat(repository.update(Long.MAX_VALUE, 1L, "Missing", BigDecimal.ONE, null, 0, status)).isZero();
+        }
+        var stored = jdbc.queryForObject("""
+                SELECT p.*, s.code FROM products p JOIN product_statuses s ON s.id = p.status_id
+                WHERE p.id = ?
+                """, (row, number) -> new OwnedProduct(row.getLong("id"), row.getString("title"),
+                row.getBigDecimal("price"), row.getString("description"), row.getLong("stock"),
+                row.getString("code")), id);
+        assertThat(stored).isEqualTo(new OwnedProduct(id, "Owner's product",
+                new BigDecimal("9999999999.99"), "Keep this", 8, "DELETED"));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isEqualTo(1L);
+    }
+
+    @Test
+    void invalidTargetStatusFailsWithoutChangingAnyProductFields() {
+        long id = insert(1, "ACTIVE", 5, "Original");
+        var before = repository.findByIdAndOwnerId(id, 1L);
+        for (String status : new String[]{"UNKNOWN", "ACTIVE' OR '1'='1"}) {
+            assertThatThrownBy(() -> repository.update(id, 1L, "Changed", BigDecimal.ONE, null, 0, status))
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+            assertThat(repository.findByIdAndOwnerId(id, 1L)).isEqualTo(before);
+        }
+    }
+
+    @Test
+    void bindsAllUpdateValuesAndOwnerAndAllowedCurrentStatusesInOneStatement() {
+        var updateJdbc = mock(JdbcTemplate.class);
+        var updateRepository = new JdbcProductRepository(updateJdbc);
+        updateRepository.update(17L, 2L, "Title", new BigDecimal("12.34"), null, 8, "INACTIVE");
+        var sql = ArgumentCaptor.forClass(String.class);
+        verify(updateJdbc).update(sql.capture(), eq("Title"), eq(new BigDecimal("12.34")), isNull(),
+                eq(8L), eq("INACTIVE"), eq(17L), eq(2L), eq("ACTIVE"), eq("INACTIVE"));
+        assertThat(sql.getValue()).contains("SET title = ?, price = ?, description = ?, stock = ?",
+                "status_id = (SELECT id FROM product_statuses WHERE code = ?)",
+                "WHERE id = ? AND user_id = ?",
+                "AND status_id IN (SELECT id FROM product_statuses WHERE code IN (?, ?))");
+        verifyNoMoreInteractions(updateJdbc);
+    }
 }

@@ -21,4 +21,13 @@ public interface ProductRepository {
      */
     OwnedProduct insert(Long ownerUserId, String title, BigDecimal price, String description,
                         long stock, String statusCode);
+
+    /**
+     * Replaces editable fields and the supplied status for this owner's ACTIVE or INACTIVE product.
+     * A null description clears it. Returns 1 when updated, or 0 when no eligible product matches.
+     * Business validation and target status selection belong to the application layer;
+     * database constraint failures propagate without partially updating the product.
+     */
+    int update(Long productId, Long ownerUserId, String title, BigDecimal price, String description,
+               long stock, String statusCode);
 }

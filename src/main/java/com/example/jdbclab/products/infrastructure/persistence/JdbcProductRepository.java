@@ -15,6 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JdbcProductRepository implements ProductRepository {
     private static final String DELETED = "DELETED";
+    private static final String UPDATE = """
+            UPDATE products
+            SET title = ?, price = ?, description = ?, stock = ?,
+                status_id = (SELECT id FROM product_statuses WHERE code = ?)
+            WHERE id = ? AND user_id = ?
+              AND status_id IN (SELECT id FROM product_statuses WHERE code IN (?, ?))
+            """;
     private static final String FIND_BY_ID_AND_OWNER = """
             SELECT p.id, p.title, p.price, p.description, p.stock, s.code AS status_code
             FROM products p
@@ -87,4 +94,10 @@ public class JdbcProductRepository implements ProductRepository {
                         () -> new IllegalStateException("Inserted product could not be read."));
     }
 
+    @Override
+    public int update(Long productId, Long ownerUserId, String title, BigDecimal price, String description,
+                      long stock, String statusCode) {
+        return jdbc.update(UPDATE, title, price, description, stock, statusCode,
+                productId, ownerUserId, "ACTIVE", "INACTIVE");
+    }
 }
