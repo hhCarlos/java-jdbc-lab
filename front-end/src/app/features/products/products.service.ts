@@ -2,11 +2,18 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 
-import { OwnedProduct, ProductPagination } from './products.models';
+import { CreateProductRequest, OwnedProduct, ProductPagination } from './products.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
   private readonly http = inject(HttpClient);
+
+  /** Creates a product; the backend validates values and assigns ownership and status. */
+  create({ title, price, description, stock }: CreateProductRequest): Observable<OwnedProduct> {
+    const body: CreateProductRequest = { title, price, stock };
+    if (description !== undefined) body.description = description;
+    return this.http.post<OwnedProduct>('/api/users/me/products', body);
+  }
 
   /** Lists the authenticated user's products; authentication is handled by the interceptor. */
   listMine({ page = 0, pageSize = 20 }: ProductPagination = {}): Observable<OwnedProduct[]> {

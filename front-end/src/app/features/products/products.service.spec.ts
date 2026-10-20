@@ -30,6 +30,71 @@ describe('ProductsService', () => {
 
   afterEach(() => http.verify());
 
+  it('POSTs lazily with only editable fields, interceptor auth, and returns the created product', async () => {
+    const input = {
+      title: 'Book', price: 9999999999.99, stock: 9999999999, description: 'Details',
+      ownerUserId: 999, statusCode: 'DELETED',
+    };
+    const result = service.create(input);
+    http.expectNone(endpoint);
+    const promise = firstValueFrom(result);
+    const pending = http.expectOne(endpoint);
+    expect(pending.request.method).toBe('POST');
+    expect(pending.request.params.keys()).toEqual([]);
+    expect(pending.request.headers.get('Authorization')).toBe('Bearer test-token');
+    expect(pending.request.body).toEqual({
+      title: 'Book', price: 9999999999.99, stock: 9999999999, description: 'Details',
+    });
+    const response: OwnedProduct = {
+      id: 42, title: 'Book', price: input.price, stock: input.stock,
+      description: 'Details', statusCode: 'ACTIVE',
+    };
+    pending.flush(response, { status: 201, statusText: 'Created' });
+    expect(await promise).toEqual(response);
+  });
+
+  it.each([undefined, null, ''])('supports zero stock and optional description %j', async description => {
+    const input = { title: 'Zero', price: 0, stock: 0, description };
+    const promise = firstValueFrom(service.create(input));
+    const pending = http.expectOne(endpoint);
+    expect(pending.request.body).toEqual(description === undefined
+      ? { title: 'Zero', price: 0, stock: 0 } : input);
+    const response: OwnedProduct = {
+      id: 43, ...input, description: description ?? null, statusCode: 'INACTIVE',
+    };
+    pending.flush(response, { status: 201, statusText: 'Created' });
+    expect(await promise).toEqual(response);
+  });
+
+  it.each([400, 401, 500])('preserves creation HTTP %s problem details without numeric conversion', async status => {
+    const result = firstValueFrom(service.create({ title: 'Book', price: 12.345, stock: 1.5 }))
+      .catch((error: unknown) => error);
+    const pending = http.expectOne(endpoint);
+    expect(pending.request.body).toEqual({ title: 'Book', price: 12.345, stock: 1.5 });
+    const problem = { type: 'about:blank', title: 'Request failed', status, detail: 'Backend problem details' };
+    pending.flush(problem, { status, statusText: 'Error' });
+    const error = await result;
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    if (!(error instanceof HttpErrorResponse)) throw new Error('Expected HTTP error');
+    expect(error.status).toBe(status);
+    expect(error.error).toEqual(problem);
+    expect(error.url).toBe(endpoint);
+  });
+
+  it('supports omitted description and preserves creation network errors', async () => {
+    const result = firstValueFrom(service.create({ title: 'Book', price: 12.34, stock: 1 }))
+      .catch((error: unknown) => error);
+    const pending = http.expectOne(endpoint);
+    expect(pending.request.body).toEqual({ title: 'Book', price: 12.34, stock: 1 });
+    const event = new ProgressEvent('error');
+    pending.error(event);
+    const error = await result;
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    if (!(error instanceof HttpErrorResponse)) throw new Error('Expected HTTP error');
+    expect(error.status).toBe(0);
+    expect(error.error).toBe(event);
+  });
+
   it('waits for subscription and GETs the proxy URL with default pagination and interceptor auth', async () => {
     const result = service.listMine();
     http.expectNone(request => request.url === endpoint);

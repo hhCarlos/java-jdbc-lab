@@ -9,6 +9,18 @@ export interface OwnedProduct {
   statusCode: string;
 }
 
+/** Only client-editable fields; ownership and publication status are assigned by the backend. */
+export interface CreateProductRequest {
+  /** Nonblank, at most 50 characters. */
+  title: string;
+  /** JSON number: non-negative, at most 10 integer and 2 fractional digits. */
+  price: number;
+  /** Omitted or null means no description. */
+  description?: string | null;
+  /** JSON integer from 0 through 9_999_999_999. */
+  stock: number;
+}
+
 /** Request pagination only: the endpoint returns an array without total counts. */
 export interface ProductPagination {
   /** Zero-based integer from 0 through 2_147_483_647. Defaults to 0. */
