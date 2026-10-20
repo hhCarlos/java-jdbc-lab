@@ -2,6 +2,7 @@ import { Component, ElementRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AppInput } from '../../../shared/app-input/app-input';
+import { AppModal } from '../../../shared/app-modal/app-modal';
 import { AppButton } from '../../../shared/app-button/app-button';
 
 const nonBlank: ValidatorFn = control =>
@@ -22,7 +23,7 @@ type Field = 'title' | 'price' | 'description' | 'stock';
 
 @Component({
   selector: 'app-product-form',
-  imports: [ReactiveFormsModule, AppButton, AppInput],
+  imports: [ReactiveFormsModule, AppButton, AppInput, AppModal],
   templateUrl: './product-form.html',
   styleUrl: './product-form.scss',
 })
@@ -30,6 +31,7 @@ export class ProductForm {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly feedback = signal('');
+  protected readonly cancelConfirmationOpen = signal(false);
   protected readonly form = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [nonBlank, Validators.maxLength(50)] }),
     price: new FormControl('', { nonNullable: true, validators: [Validators.required, decimal(2)] }),
@@ -47,6 +49,7 @@ export class ProductForm {
   protected submit(): void {
     this.feedback.set('');
     this.form.markAllAsTouched();
+    if (this.form.pending) return;
     if (this.form.invalid) {
       const firstInvalid = (Object.keys(this.form.controls) as Field[])
         .find(field => this.form.controls[field].invalid);
@@ -57,6 +60,19 @@ export class ProductForm {
   }
 
   protected cancel(): void {
+    if (this.form.dirty) {
+      this.cancelConfirmationOpen.set(true);
+      return;
+    }
+    this.leaveWithoutSaving();
+  }
+
+  protected keepEditing(): void {
+    this.cancelConfirmationOpen.set(false);
+  }
+
+  protected leaveWithoutSaving(): void {
+    this.cancelConfirmationOpen.set(false);
     void this.router.navigate(['/app/products']);
   }
 }

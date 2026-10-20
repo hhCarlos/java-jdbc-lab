@@ -1,4 +1,7 @@
 html[data-theme='dark'] {
+  --color-disabled-background: hsl(0 0% 22%);
+  --color-disabled-text: hsl(0 0% 65%);
+  --color-disabled-border: hsl(0 0% 40%);
   color-scheme: dark;
   --color-background: hsl(225 15% 9%);
   --color-surface: hsl(225 12% 13%);

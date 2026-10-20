@@ -9,6 +9,7 @@ standalone component's `imports` array.
 | `icon` | `IconName` from the existing icon registry | Omitted |
 | `iconPosition` | `'left' \| 'right' \| 'top' \| 'bottom'` | `'left'` |
 | `disabled` | `boolean` | `false` |
+| `autofocus` | `boolean` | `false` |
 | `type` | `'button' \| 'submit' \| 'reset'` | `'button'` |
 | `status` | `'default' \| 'success' \| 'error' \| 'warning'` | `'default'` |
 | `variant` | `'solid' \| 'ghost'` | `'solid'` |
@@ -28,7 +29,9 @@ standalone component's `imports` array.
 ```
 
 The consumer owns handlers. `pressed` follows native click activation, including
-keyboard activation; it is not a toggle state. Disabled buttons emit nothing.
+keyboard activation; it is not a toggle state. Disabled buttons emit nothing. `autofocus` forwards to the native button for
+initial focus in a dialog. Disabled buttons use the `app-button--disabled` modifier
+and neutral semantic theme tokens across all statuses and variants.
 Submit and reset use normal browser form behavior, and the component never
 prevents the activation event's default action. For form submission, handle the
 form's submit event to avoid invoking the same action in both handlers.

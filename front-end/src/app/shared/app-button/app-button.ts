@@ -18,6 +18,7 @@ export class AppButton {
   readonly icon = input<IconName>();
   readonly iconPosition = input<ButtonIconPosition>('left');
   readonly disabled = input(false, { transform: booleanAttribute });
+  readonly autofocus = input(false, { transform: booleanAttribute });
   readonly type = input<ButtonType>('button');
   readonly status = input<ButtonStatus>('default');
   readonly variant = input<ButtonVariant>('solid');

@@ -35,7 +35,16 @@ describe('AppButton', () => {
     button.click();
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(button.disabled).toBe(true);
+    expect(button.classList.contains('app-button--disabled')).toBe(true);
     expect(pressed).not.toHaveBeenCalled();
+  });
+
+  it('forwards autofocus to the native button', () => {
+    const { fixture, button } = setup();
+    expect(button.autofocus).toBe(false);
+    fixture.componentRef.setInput('autofocus', true);
+    fixture.detectChanges();
+    expect(button.autofocus).toBe(true);
   });
 
   it('renders text only without creating an icon or fallback and defaults to an enabled button', () => {

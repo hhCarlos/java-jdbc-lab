@@ -1,5 +1,8 @@
 :root,
 html[data-theme='light'] {
+  --color-disabled-background: hsl(0 0% 90%);
+  --color-disabled-text: hsl(0 0% 40%);
+  --color-disabled-border: hsl(0 0% 65%);
   color-scheme: light;
   --color-background: hsl(40 25% 96%);
   --color-surface: hsl(40 20% 99%);

@@ -11,9 +11,17 @@
     <app-input label="Stock" inputId="product-stock" formControlName="stock"
       inputMode="numeric" [errorMessages]="stockErrors" />
     <div class="product-form__actions">
-      <app-button label="Create product" status="success" variant="ghost" type="submit" />
+      <app-button label="Create product" status="success" variant="ghost" type="submit"
+        [disabled]="form.invalid || form.pending" />
       <app-button label="Cancel" status="error" variant="ghost" (pressed)="cancel()" />
     </div>
   </form>
   <p class="product-form__feedback" role="status" aria-live="polite">{{ feedback() }}</p>
+  <app-modal [open]="cancelConfirmationOpen()" title="Leave this page?" (closed)="keepEditing()">
+    <p class="product-form__modal-text">Are you sure you want to leave? Your unsaved changes will be permanently lost.</p>
+    <div class="product-form__actions">
+      <app-button label="Keep editing" variant="ghost" status="success" type="button" [autofocus]="true" (pressed)="keepEditing()" />
+      <app-button label="Leave without saving" type="button" status="error" (pressed)="leaveWithoutSaving()" />
+    </div>
+  </app-modal>
 </section>
