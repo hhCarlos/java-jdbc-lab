@@ -44,6 +44,57 @@ class JdbcProductRepositoryTest {
     }
 
     @Test
+    void findsOwnersProductAndMapsAllEditFields() {
+        String description = "Description with ' quotes and ? placeholders ".repeat(200);
+        long id = insert(1, "ACTIVE", 7, description);
+        assertThat(repository.findByIdAndOwnerId(id, 1L)).contains(new OwnedProduct(
+                id, "Owner's product", new BigDecimal("9999999999.99"), description, 7, "ACTIVE"));
+    }
+
+    @Test
+    void doesNotFindAnotherOwnersMissingOrDeletedProduct() {
+        long other = insert(2, "ACTIVE", 3, null);
+        long deleted = insert(1, "DELETED", 10, null);
+        assertThat(repository.findByIdAndOwnerId(other, 1L)).isEmpty();
+        assertThat(repository.findByIdAndOwnerId(Long.MAX_VALUE, 1L)).isEmpty();
+        assertThat(repository.findByIdAndOwnerId(deleted, 1L)).isEmpty();
+    }
+
+    @Test
+    void findsInactiveAndZeroStockProductsUsingStableStatusCodes() {
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 11, "ACTIVE");
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 22, "INACTIVE");
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 33, "DELETED");
+        for (String status : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (long stock : new long[]{0, 5}) {
+                long id = insert(1, status, stock, null);
+                assertThat(repository.findByIdAndOwnerId(id, 1L)).contains(new OwnedProduct(
+                        id, "Owner's product", new BigDecimal("9999999999.99"), null, stock, status));
+            }
+        }
+        long deleted = insert(1, "DELETED", 0, null);
+        assertThat(repository.findByIdAndOwnerId(deleted, 1L)).isEmpty();
+    }
+
+    @Test
+    void bindsProductOwnerAndDeletedStatusInLookupSql() {
+        repository.findByIdAndOwnerId(17L, 2L);
+        var sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), org.mockito.ArgumentMatchers.<RowMapper<OwnedProduct>>any(),
+                eq(17L), eq(2L), eq("DELETED"));
+        assertThat(sql.getValue()).contains("WHERE p.id = ? AND p.user_id = ? AND s.code <> ?")
+                .doesNotContain("stock >", "SELECT *");
+    }
+
+    @Test
+    void rejectsNullLookupIdsBeforeQuerying() {
+        clearInvocations(jdbc);
+        assertThatNullPointerException().isThrownBy(() -> repository.findByIdAndOwnerId(null, 1L));
+        assertThatNullPointerException().isThrownBy(() -> repository.findByIdAndOwnerId(1L, null));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
     void isolatesOwnersAndIncludesActiveInactiveAndZeroStock() {
         long first = insert(1, "ACTIVE", 0, null);
         long other = insert(2, "ACTIVE", 3, null);

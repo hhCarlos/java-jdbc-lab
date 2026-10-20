@@ -5,6 +5,7 @@ import com.example.jdbclab.products.domain.OwnedProduct;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -14,6 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JdbcProductRepository implements ProductRepository {
     private static final String DELETED = "DELETED";
+    private static final String FIND_BY_ID_AND_OWNER = """
+            SELECT p.id, p.title, p.price, p.description, p.stock, s.code AS status_code
+            FROM products p
+            JOIN product_statuses s ON s.id = p.status_id
+            WHERE p.id = ? AND p.user_id = ? AND s.code <> ?
+            """;
     private static final String FIND_BY_OWNER = """
             SELECT p.id, p.title, p.price, p.description, p.stock, s.code AS status_code
             FROM products p
@@ -29,6 +36,14 @@ public class JdbcProductRepository implements ProductRepository {
 
     public JdbcProductRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+    @Override
+    public Optional<OwnedProduct> findByIdAndOwnerId(Long productId, Long ownerUserId) {
+        Objects.requireNonNull(productId, "Product ID is required.");
+        Objects.requireNonNull(ownerUserId, "Owner user ID is required.");
+        return jdbc.query(FIND_BY_ID_AND_OWNER, ROW_MAPPER, productId, ownerUserId, DELETED)
+                .stream().findFirst();
     }
 
     @Override
