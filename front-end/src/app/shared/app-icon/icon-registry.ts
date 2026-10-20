@@ -5,6 +5,7 @@ export const ICON_REGISTRY = {
   products: 'products',
   profile: 'profile',
   logout: 'logout',
+  edit: 'edit',
 } as const satisfies Readonly<Record<string, string>>;
 
 export type IconName = keyof typeof ICON_REGISTRY;

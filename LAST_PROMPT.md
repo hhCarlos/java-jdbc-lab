@@ -2,38 +2,8 @@
 
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T19:18:16-06:00
+Recorded at: 2026-10-19T19:25:34-06:00
 
 ## Task prompt
 
-Connect the existing product-creation form to ProductsService.create().
-
-Follow AGENTS.md and all applicable task prerequisites. Reuse the existing typed service contract, global loader, and submission conventions.
-
-Submission:
-- Submit only when the form is valid and no request is pending.
-- Map form values to the service's request types without silently rounding or truncating numbers.
-- Send only title, price, description, and stock.
-- Show the global blocking loader immediately before sending the request and keep it visible while awaiting the response.
-- Prevent duplicate submissions.
-- Always release the loader and reset submission state on success, error, or cancellation, using finalize and proper subscription cleanup.
-
-Success:
-- Mark the form pristine after the backend confirms creation.
-- Navigate to /app/products.
-- Ensure the Products page fetches a fresh list from the backend when entered, preserving server-side pagination.
-- Avoid stale cached results or duplicate fetches.
-- Remove the placeholder message stating that saving is unavailable.
-
-Failure:
-- Stay on the creation page and preserve entered values for retry.
-- For now, log only this generic message:
-  console.log('Unable to create product. Please try again.');
-- Do not log the request body, token, or raw error object.
-- Preserve existing authentication-expiry handling.
-
-Preserve validation, disabled-button behavior, and dirty-form cancellation confirmation. Do not modify the backend or add notifications or unrelated features.
-
-Add focused tests covering successful creation and navigation, fresh listing retrieval, failed submission preserving values, duplicate-submit prevention, and loader cleanup.
-
-Run relevant tests and the Angular build. Report results and manual verification steps.
+Please add this Icon to AppIcon with the stablish rules: <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g id="Edit / Edit_Pencil_Line_02"> <path id="Vector" d="M4 20.0001H20M4 20.0001V16.0001L14.8686 5.13146L14.8704 5.12976C15.2652 4.73488 15.463 4.53709 15.691 4.46301C15.8919 4.39775 16.1082 4.39775 16.3091 4.46301C16.5369 4.53704 16.7345 4.7346 17.1288 5.12892L18.8686 6.86872C19.2646 7.26474 19.4627 7.46284 19.5369 7.69117C19.6022 7.89201 19.6021 8.10835 19.5369 8.3092C19.4628 8.53736 19.265 8.73516 18.8695 9.13061L18.8686 9.13146L8 20.0001L4 20.0001Z" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g> </g></svg>
