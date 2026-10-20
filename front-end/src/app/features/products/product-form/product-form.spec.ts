@@ -8,6 +8,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { vi } from 'vitest';
 import { routes } from '../../../app.routes';
 import { SessionService } from '../../auth/session.service';
+import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
 import { ProductForm } from './product-form';
 
 describe('Product form', () => {
@@ -78,17 +79,93 @@ describe('Product form', () => {
     input('title', 'Notebook'); input('price', '0'); input('stock', '0');
     input(field, value); submit();
     expect(element.querySelector(`#product-${field}`)?.getAttribute('aria-invalid')).toBe('true');
-    expect(element.querySelector('[role="status"]')?.textContent).toBe('');
+    expect(element.textContent).not.toContain('Saving products is not available yet');
   });
 
-  it.each([['0', '0'], ['9999999999.99', '9999999999']])('accepts boundaries without saving (%s, %s)', (price, stock) => {
-    const { element, input, submit } = setup();
+  it.each([['0', '0'], ['9999999999.99', '9999999999']])('submits valid boundaries without rounding (%s, %s)', (price, stock) => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const { element, input, submit, form } = setup();
     input('title', 'x'.repeat(50)); input('price', price); input('stock', stock);
     submit();
     expect(element.querySelector('[aria-invalid="true"]')).toBeNull();
-    expect(element.querySelector('[role="status"]')?.textContent).toContain('have not been saved');
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/users/me/products');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ title: 'x'.repeat(50), price: Number(price), description: '', stock: Number(stock) });
+    expect(navigate).not.toHaveBeenCalled();
+    expect(form.dirty).toBe(true);
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(true);
+    request.flush({ id: 1 });
+    expect(form.pristine).toBe(true);
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+    expect(form.getRawValue().price).toBe(price);
     expect(element.querySelectorAll('input, textarea').length).toBe(4);
     TestBed.inject(HttpTestingController).expectNone(() => true);
+  });
+
+  it('prevents duplicates and preserves failed values for retry', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const { fixture, input, submit, form, button } = setup();
+    input('title', 'Notebook'); input('price', '0012.50');
+    input('description', 'Details'); input('stock', '3');
+    const values = form.getRawValue();
+    submit(); submit();
+    expect(button('Create product').disabled).toBe(true);
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/users/me/products');
+    expect(request.request.body).toEqual({ title: 'Notebook', price: 12.5, description: 'Details', stock: 3 });
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(true);
+    request.flush({ private: 'details' }, { status: 500, statusText: 'Failure' });
+    fixture.detectChanges();
+    expect(form.getRawValue()).toEqual(values);
+    expect(form.dirty).toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledExactlyOnceWith('Unable to create product. Please try again.');
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+    expect(button('Create product').disabled).toBe(false);
+    submit();
+    TestBed.inject(HttpTestingController).expectOne('/api/users/me/products').flush({ id: 1 });
+    log.mockRestore();
+  });
+
+  it('cancels pending creation on destruction and releases only its loader', () => {
+    const { fixture, input, submit } = setup();
+    const loader = TestBed.inject(BlockingLoaderService);
+    const releaseOther = loader.show();
+    input('title', 'Notebook'); input('price', '12.50'); input('stock', '3');
+    submit();
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/users/me/products');
+    fixture.destroy();
+    expect(request.cancelled).toBe(true);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+    expect(loader.visible()).toBe(true);
+    releaseOther();
+    expect(loader.visible()).toBe(false);
+  });
+
+  it('fetches exactly one fresh server page when returning after creation', async () => {
+    TestBed.inject(SessionService).establish({ accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create('/app/products');
+    const listingUrl = '/api/users/me/products?page=0&pageSize=20';
+    http.expectOne(listingUrl).flush([]);
+    await harness.navigateByUrl('/app/products/create');
+    const element = harness.routeNativeElement!;
+    for (const [field, value] of [['title', 'Fresh notebook'], ['price', '12.50'], ['stock', '3']]) {
+      const input = element.querySelector<HTMLInputElement>(`#product-${field}`)!;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    }
+    element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const created = { id: 1, title: 'Fresh notebook', price: 12.5, description: '', stock: 3, statusCode: 'ACTIVE' };
+    http.expectOne('/api/users/me/products').flush(created);
+    await harness.fixture.whenStable();
+    http.expectOne(listingUrl).flush([created]);
+    harness.detectChanges();
+    expect(TestBed.inject(Router).url).toBe('/app/products');
+    expect(harness.routeNativeElement?.textContent).toContain('Fresh notebook');
+    http.expectNone(() => true);
   });
 
   it('returns to the listing on Cancel', () => {
@@ -104,7 +181,7 @@ describe('Product form', () => {
     const create = button('Create product');
     expect(create.disabled).toBe(true);
     create.click();
-    expect(element.querySelector('[role="status"]')?.textContent).toBe('');
+    expect(element.textContent).not.toContain('Saving products is not available yet');
     input('title', 'Notebook'); input('price', '12'); input('stock', '2');
     fixture.detectChanges();
     expect(create.disabled).toBe(false);
@@ -112,7 +189,7 @@ describe('Product form', () => {
     fixture.detectChanges();
     expect(create.disabled).toBe(true);
     submit();
-    expect(element.querySelector('[role="status"]')?.textContent).toBe('');
+    expect(element.textContent).not.toContain('Saving products is not available yet');
     form.updateValueAndValidity();
     fixture.detectChanges();
     expect(create.disabled).toBe(false);
@@ -146,7 +223,7 @@ describe('Product form', () => {
     expect(form.getRawValue()).toEqual(values);
     expect(form.dirty).toBe(true);
     expect(navigate).not.toHaveBeenCalled();
-    expect(element.querySelector('[role="status"]')?.textContent).toBe('');
+    expect(element.textContent).not.toContain('Saving products is not available yet');
     expect(document.activeElement).toBe(button('Cancel'));
     button('Cancel').click();
     fixture.detectChanges();
@@ -164,7 +241,7 @@ describe('Product form', () => {
     fixture.detectChanges();
     expect(element.querySelector('dialog')!.open).toBe(false);
     expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
-    expect(element.querySelector('[role="status"]')?.textContent).toBe('');
+    expect(element.textContent).not.toContain('Saving products is not available yet');
   });
 
   it('opens inside the guarded layout with header and create mode', async () => {

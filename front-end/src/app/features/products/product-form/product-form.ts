@@ -1,4 +1,9 @@
-import { Component, ElementRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { defer, finalize } from 'rxjs';
+import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
+import { CreateProductRequest } from '../products.models';
+import { ProductsService } from '../products.service';
+import { Component, DestroyRef, ElementRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AppInput } from '../../../shared/app-input/app-input';
@@ -30,7 +35,10 @@ type Field = 'title' | 'price' | 'description' | 'stock';
 export class ProductForm {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  protected readonly feedback = signal('');
+  private readonly service = inject(ProductsService);
+  private readonly loader = inject(BlockingLoaderService);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly submitting = signal(false);
   protected readonly cancelConfirmationOpen = signal(false);
   protected readonly form = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [nonBlank, Validators.maxLength(50)] }),
@@ -47,7 +55,7 @@ export class ProductForm {
   };
 
   protected submit(): void {
-    this.feedback.set('');
+    if (this.submitting()) return;
     this.form.markAllAsTouched();
     if (this.form.pending) return;
     if (this.form.invalid) {
@@ -56,7 +64,28 @@ export class ProductForm {
       this.host.nativeElement.querySelector<HTMLElement>(`[formControlName="${firstInvalid}"] input, textarea[formControlName="${firstInvalid}"]`)?.focus();
       return;
     }
-    this.feedback.set('Saving products is not available yet. Your entries have not been saved.');
+    const values = this.form.getRawValue();
+    const request: CreateProductRequest = {
+      title: values.title,
+      price: Number(values.price),
+      description: values.description,
+      stock: Number(values.stock),
+    };
+    this.submitting.set(true);
+    const releaseLoader = this.loader.show();
+    defer(() => this.service.create(request)).pipe(
+      finalize(() => {
+        releaseLoader();
+        this.submitting.set(false);
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: () => {
+        this.form.markAsPristine();
+        void this.router.navigate(['/app/products']);
+      },
+      error: () => console.log('Unable to create product. Please try again.'),
+    });
   }
 
   protected cancel(): void {

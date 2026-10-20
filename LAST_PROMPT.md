@@ -1,28 +1,39 @@
+# Latest task prompt
+
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T19:09:16-06:00
+Recorded at: 2026-10-19T19:18:16-06:00
 
-Task prompt:
+## Task prompt
 
-Add product creation to the existing frontend ProductsService.
+Connect the existing product-creation form to ProductsService.create().
 
-Follow AGENTS.md and all applicable task prerequisites.
+Follow AGENTS.md and all applicable task prerequisites. Reuse the existing typed service contract, global loader, and submission conventions.
 
-Requirements:
-- Implement create() using POST /api/users/me/products through the existing proxy.
-- Inspect the backend creation contract using read-only access to confirm request types, response fields, and error responses.
-- Define or reuse typed request and response models.
+Submission:
+- Submit only when the form is valid and no request is pending.
+- Map form values to the service's request types without silently rounding or truncating numbers.
 - Send only title, price, description, and stock.
-- Do not accept or send owner ID or publication status; the backend assigns them.
-- Match the actual API representation of price and stock without silently rounding or truncating values.
-- Handle an optional description according to the backend contract.
-- Rely on the existing interceptor for the bearer token.
-- Return a typed Observable without subscribing inside the service.
-- Preserve HTTP errors for the caller.
-- Preserve existing product-listing behavior.
+- Show the global blocking loader immediately before sending the request and keep it visible while awaiting the response.
+- Prevent duplicate submissions.
+- Always release the loader and reset submission state on success, error, or cancellation, using finalize and proper subscription cleanup.
 
-Do not connect the form, add navigation, loaders, success messages, or backend changes in this task.
+Success:
+- Mark the form pristine after the backend confirms creation.
+- Navigate to /app/products.
+- Ensure the Products page fetches a fresh list from the backend when entered, preserving server-side pagination.
+- Avoid stale cached results or duplicate fetches.
+- Remove the placeholder message stating that saving is unavailable.
 
-Add focused HTTP tests verifying the POST URL and payload, response handling, zero-stock creation, optional description, and error propagation. Mock requests rather than creating real products.
+Failure:
+- Stay on the creation page and preserve entered values for retry.
+- For now, log only this generic message:
+  console.log('Unable to create product. Please try again.');
+- Do not log the request body, token, or raw error object.
+- Preserve existing authentication-expiry handling.
 
-Run relevant tests and the Angular build. Report results, the confirmed request/response contract, and example service usage.
+Preserve validation, disabled-button behavior, and dirty-form cancellation confirmation. Do not modify the backend or add notifications or unrelated features.
+
+Add focused tests covering successful creation and navigation, fresh listing retrieval, failed submission preserving values, duplicate-submit prevention, and loader cleanup.
+
+Run relevant tests and the Angular build. Report results and manual verification steps.
