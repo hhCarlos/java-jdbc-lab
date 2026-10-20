@@ -2,7 +2,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, EMPTY, catchError, combineLatest, defer, finalize, switchMap, tap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
-import { CreateProductRequest } from '../products.models';
+import { CreateProductRequest, UpdateProductRequest } from '../products.models';
 import { ProductsService } from '../products.service';
 import { Component, DestroyRef, ElementRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
@@ -39,6 +39,7 @@ export class ProductForm {
   // Preserve signed 64-bit IDs as text rather than rounding them to a JS number.
   protected readonly productId = signal<string | null>(null);
   protected readonly editError = signal<string | null>(null);
+  private readonly productLoaded = signal(false);
   protected readonly loading = signal(false);
   protected readonly recoverable = signal(false);
   private readonly reload = new BehaviorSubject(0);
@@ -68,6 +69,7 @@ export class ProductForm {
       switchMap(([data, params]) => {
         const mode = data['mode'] === 'edit' ? 'edit' : 'create';
         this.mode.set(mode);
+        this.productLoaded.set(false);
         const id = params.get('id');
         const validId = id !== null && /^[0-9]+$/.test(id)
           && BigInt(id) > 0n && BigInt(id) <= 9_223_372_036_854_775_807n;
@@ -94,6 +96,7 @@ export class ProductForm {
               stock: String(product.stock),
             });
             this.form.enable();
+            this.productLoaded.set(true);
           }),
           catchError((error: unknown) => {
             const status = error instanceof HttpErrorResponse ? error.status : undefined;
@@ -116,8 +119,17 @@ export class ProductForm {
     if (this.recoverable() && !this.loading()) this.reload.next(this.reload.value + 1);
   }
 
+  protected canSubmit(): boolean {
+    return !this.submitting() && !this.form.pending && this.form.valid
+      && (this.mode() === 'create' || (this.productLoaded() && !this.loading()
+        && this.productId() !== null && this.form.dirty));
+  }
+
   protected submit(): void {
-    if (this.mode() !== 'create' || this.submitting()) return;
+    const editing = this.mode() === 'edit';
+    const id = this.productId();
+    if (this.submitting() || (editing && (!this.productLoaded() || this.loading()
+      || id === null || this.form.pristine))) return;
     this.form.markAllAsTouched();
     if (this.form.pending) return;
     if (this.form.invalid) {
@@ -127,7 +139,7 @@ export class ProductForm {
       return;
     }
     const values = this.form.getRawValue();
-    const request: CreateProductRequest = {
+    const request: CreateProductRequest | UpdateProductRequest = {
       title: values.title,
       price: Number(values.price),
       description: values.description,
@@ -135,7 +147,7 @@ export class ProductForm {
     };
     this.submitting.set(true);
     const releaseLoader = this.loader.show();
-    defer(() => this.service.create(request)).pipe(
+    defer(() => editing ? this.service.update(id!, request) : this.service.create(request)).pipe(
       finalize(() => {
         releaseLoader();
         this.submitting.set(false);
@@ -146,7 +158,7 @@ export class ProductForm {
         this.form.markAsPristine();
         void this.router.navigate(['/app/products']);
       },
-      error: () => console.log('Unable to create product. Please try again.'),
+      error: () => console.log(`Unable to ${editing ? 'update' : 'create'} product. Please try again.`),
     });
   }
 

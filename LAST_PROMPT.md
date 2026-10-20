@@ -2,48 +2,42 @@
 
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T20:42:52-06:00
+Recorded at: 2026-10-19T20:53:59-06:00
 
 ## Task prompt
 
-Implement the product-update application service and expose it through the existing owner-products controller.
+Implement product-update integration in front-end/, reusing the existing ProductForm edit flow.
 
-Follow AGENTS.md and all applicable task prerequisites. Reuse the repository update operation already implemented.
+Follow AGENTS.md and all applicable task prerequisites.
 
-Endpoint:
-PUT /users/me/products/{id}
+ProductsService:
+- Add update(id, request) using PUT /api/users/me/products/{id}.
+- Use typed request and response models matching the backend contract.
+- Send title, price, description, and stock only.
+- Rely on the existing bearer interceptor.
+- Return an Observable and preserve HTTP errors.
 
-Request:
-- title: required, nonblank, maximum 50 characters.
-- price: required, non-negative, fitting NUMBER(12,2) without silent rounding.
-- description: optional; omitted or null clears the description.
-- stock: required, non-negative whole number within the database column's range.
+ProductForm:
+- In edit mode, display "Save changes" and call update() with the validated route ID.
+- Preserve create mode and its existing create() call.
+- Enable edit submission only after product loading succeeds, the form is valid, and changes have been made.
+- Disable submission during validation or an active request.
+- Remove the placeholder stating that editing is unavailable.
+- Preserve numeric validation without silent rounding or truncation.
+- Show the existing global loader immediately before sending the update.
+- Prevent duplicate submissions and release the loader on success, failure, or cancellation.
 
-Application behavior:
-- Resolve ownership from the existing authenticated-user mechanism.
-- Keep application services independent of HTTP and Spring Security types.
-- Load the owner's current product and apply existing business rules.
-- ACTIVE with new stock zero becomes INACTIVE.
-- ACTIVE with positive stock remains ACTIVE.
-- INACTIVE remains INACTIVE, including when restocked.
-- Never update or restore DELETED products.
-- Do not expose owner ID or status as writable request fields.
-- Perform lookup, status decision, update, and response retrieval within one transaction.
-- Check the repository's affected-row result; never report success when nothing was updated.
-- Preserve product ID and ownership.
-- Never create a product when the requested ID does not exist.
+Success:
+- Mark the form pristine.
+- Navigate to /app/products and retrieve a fresh server-side listing.
 
-Controller:
-- Require a valid bearer JWT.
-- Validate the path ID and request using existing conventions.
-- Return 200 with the updated product.
-- Return the same 404 response for missing, deleted, or another user's product.
-- Return 400 for invalid input.
-- Preserve existing authentication and exception handling.
-- Document the endpoint, replacement semantics, and responses in OpenAPI.
+Failure:
+- Preserve entered values and remain on the form.
+- Reuse existing error handling and generic console feedback.
+- Preserve authentication-expiry handling.
 
-Preserve existing creation, listing, lookup, and public catalog behavior. Update relevant business-rule documentation where needed. Do not modify the frontend or schema.
+Keep dirty-form cancellation confirmation, existing table navigation, and product-loading behavior unchanged. Do not modify backend code or add new notifications.
 
-Add focused service and HTTP/security tests for successful updates, validation, ownership isolation, status transitions, description clearing, repeated identical requests, and missing authentication.
+Add focused tests covering the PUT request, create/edit dispatch, successful navigation, failed updates preserving values, submission eligibility, and loader cleanup.
 
-Run relevant tests. Report results and provide a sample authenticated PUT request.
+Run relevant frontend tests and the Angular build. Report results and manual verification steps.

@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 
-import { CreateProductRequest, OwnedProduct, ProductPagination } from './products.models';
+import { CreateProductRequest, OwnedProduct, ProductPagination, UpdateProductRequest } from './products.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
@@ -18,6 +18,13 @@ export class ProductsService {
     const body: CreateProductRequest = { title, price, stock };
     if (description !== undefined) body.description = description;
     return this.http.post<OwnedProduct>('/api/users/me/products', body);
+  }
+
+  /** Replaces editable fields; authentication and HTTP errors stay in the HTTP pipeline. */
+  update(id: string, { title, price, description, stock }: UpdateProductRequest): Observable<OwnedProduct> {
+    const body: UpdateProductRequest = { title, price, stock };
+    if (description !== undefined) body.description = description;
+    return this.http.put<OwnedProduct>(`/api/users/me/products/${encodeURIComponent(id)}`, body);
   }
 
   /** Lists the authenticated user's products; authentication is handled by the interceptor. */

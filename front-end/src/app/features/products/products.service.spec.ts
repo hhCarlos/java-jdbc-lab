@@ -30,6 +30,39 @@ describe('ProductsService', () => {
 
   afterEach(() => http.verify());
 
+  it.each([undefined, null, 'Details'])('PUTs only editable fields with exact ID and description %j', async description => {
+    const input = { title: 'Book', price: 12.34, stock: 0, description, ownerUserId: 8, statusCode: 'ACTIVE' };
+    const result = service.update('9007199254740993', input);
+    http.expectNone(() => true);
+    const promise = firstValueFrom(result);
+    const pending = http.expectOne(`${endpoint}/9007199254740993`);
+    expect(pending.request.method).toBe('PUT');
+    expect(pending.request.headers.get('Authorization')).toBe('Bearer test-token');
+    expect(pending.request.body).toEqual({ title: 'Book', price: 12.34, stock: 0,
+      ...(description === undefined ? {} : { description }) });
+    const response: OwnedProduct = { id: 42, title: 'Book', price: 12.34, stock: 0,
+      description: description ?? null, statusCode: 'INACTIVE' };
+    pending.flush(response);
+    expect(await promise).toEqual(response);
+  });
+
+  it.each([0, 400, 401, 404, 500])('preserves update errors %s and authentication expiry', async status => {
+    const result = firstValueFrom(service.update('42', { title: 'Book', price: 12.345, stock: 1.5 }))
+      .catch((error: unknown) => error);
+    const pending = http.expectOne(`${endpoint}/42`);
+    expect(pending.request.body).toEqual({ title: 'Book', price: 12.345, stock: 1.5 });
+    const problem = { detail: 'Failure' };
+    const event = new ProgressEvent('error');
+    if (status === 0) pending.error(event);
+    else pending.flush(problem, { status, statusText: 'Error' });
+    const error = await result as HttpErrorResponse;
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    expect(error.status).toBe(status);
+    expect(error.error).toEqual(status === 0 ? event : problem);
+    expect(TestBed.inject(SessionService).clear).toHaveBeenCalledTimes(status === 401 ? 1 : 0);
+    if (status === 401) expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/auth/login'], { replaceUrl: true });
+  });
+
   it('GETs lazily using the exact ID and interceptor authentication', async () => {
     const result = service.getById('9007199254740993');
     http.expectNone(() => true);

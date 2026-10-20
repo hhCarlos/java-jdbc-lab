@@ -82,6 +82,81 @@ describe('Product form', () => {
     expect(fixture.componentInstance['cancelConfirmationOpen']()).toBe(true);
   });
 
+  it('enables valid dirty edits only after loading, blocks pending and duplicate submissions, and navigates on success', () => {
+    const { fixture, input, submit, form, button } = editSetup('9007199254740993');
+    const http = TestBed.inject(HttpTestingController);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const create = vi.spyOn(TestBed.inject(ProductsService), 'create');
+    submit();
+    http.expectOne('/api/users/me/products/9007199254740993').flush({ ...product, price: 12.34 });
+    fixture.detectChanges();
+    expect(button('Save changes').disabled).toBe(true);
+    submit();
+    http.expectNone(() => true);
+    input('price', '12.345');
+    fixture.detectChanges();
+    expect(button('Save changes').disabled).toBe(true);
+    submit();
+    http.expectNone(() => true);
+    input('price', '0012.50');
+    fixture.detectChanges();
+    expect(button('Save changes').disabled).toBe(false);
+    form.markAsPending();
+    fixture.detectChanges();
+    expect(button('Save changes').disabled).toBe(true);
+    submit();
+    http.expectNone(() => true);
+    form.updateValueAndValidity();
+    const loader = TestBed.inject(BlockingLoaderService);
+    const update = vi.spyOn(TestBed.inject(ProductsService), 'update');
+    update.mockImplementation((id, request) => {
+      expect(loader.visible()).toBe(true);
+      return originalUpdate(id, request);
+    });
+    const originalUpdate = ProductsService.prototype.update.bind(TestBed.inject(ProductsService));
+    submit(); submit();
+    expect(button('Save changes').disabled).toBe(true);
+    const request = http.expectOne('/api/users/me/products/9007199254740993');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ title: 'Notebook', price: 12.5, description: '', stock: 3 });
+    request.flush({ ...product, price: 12.5 });
+    expect(form.pristine).toBe(true);
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
+    expect(create).not.toHaveBeenCalled();
+    expect(loader.visible()).toBe(false);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+  });
+
+  it('preserves failed update values for retry and releases the loader on failure and cancellation', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const { fixture, input, submit, form, button } = editSetup('42');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
+    input('title', 'Changed'); input('price', '0012.50'); input('description', 'Keep me');
+    const values = form.getRawValue();
+    submit();
+    http.expectOne('/api/users/me/products/42').flush({}, { status: 500, statusText: 'Failure' });
+    fixture.detectChanges();
+    expect(form.getRawValue()).toEqual(values);
+    expect(form.dirty).toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledExactlyOnceWith('Unable to update product. Please try again.');
+    const loader = TestBed.inject(BlockingLoaderService);
+    expect(loader.visible()).toBe(false);
+    expect(button('Save changes').disabled).toBe(false);
+    const releaseOther = loader.show();
+    submit();
+    const pending = http.expectOne('/api/users/me/products/42');
+    fixture.destroy();
+    expect(pending.cancelled).toBe(true);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+    expect(loader.visible()).toBe(true);
+    releaseOther();
+    expect(loader.visible()).toBe(false);
+    log.mockRestore();
+  });
+
   it('shows unavailable feedback and returns to Products after 404', () => {
     const { fixture, element, form, button } = editSetup('42');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -133,12 +208,12 @@ describe('Product form', () => {
     TestBed.inject(HttpTestingController).expectNone(() => true);
   });
 
-  it.each(['1', '9007199254740993', '9223372036854775807'])('disables edit mode for valid ID %s and blocks programmatic creation', id => {
+  it.each(['1', '9007199254740993', '9223372036854775807'])('loads valid ID %s and blocks pristine programmatic submission', id => {
     const { fixture, element, form, submit, button } = editSetup(id);
     const create = vi.spyOn(TestBed.inject(ProductsService), 'create');
     expect(fixture.componentInstance['mode']()).toBe('edit');
     expect(fixture.componentInstance['productId']()).toBe(id);
-    expect(element.textContent).toContain('Saving changes is not available yet.');
+    expect(element.textContent).not.toContain('Saving changes is not available yet.');
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(form.disabled).toBe(true);
     expect(Array.from(element.querySelectorAll<HTMLInputElement>('input, textarea')).every(input => input.disabled)).toBe(true);
@@ -198,7 +273,7 @@ describe('Product form', () => {
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Edit product');
     const route = TestBed.inject(Router).routerState.snapshot.root.firstChild!.firstChild!;
     expect(route.data).toEqual({ mode: 'edit', pageTitle: 'Edit product', pageSubtitle: 'Update your product details.' });
-    expect(harness.routeNativeElement?.textContent).toContain('Saving changes is not available yet.');
+    expect(harness.routeNativeElement?.textContent).not.toContain('Saving changes is not available yet.');
     TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush(product);
   });
 
@@ -295,13 +370,14 @@ describe('Product form', () => {
     expect(loader.visible()).toBe(false);
   });
 
-  it('fetches exactly one fresh server page when returning after creation', async () => {
+  it.each(['create', 'edit'])('fetches exactly one fresh server page when returning after %s', async mode => {
     TestBed.inject(SessionService).establish({ accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
     const http = TestBed.inject(HttpTestingController);
     const harness = await RouterTestingHarness.create('/app/products');
     const listingUrl = '/api/users/me/products?page=0&pageSize=20';
     http.expectOne(listingUrl).flush([]);
-    await harness.navigateByUrl('/app/products/create');
+    await harness.navigateByUrl(mode === 'edit' ? '/app/products/edit/42' : '/app/products/create');
+    if (mode === 'edit') http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
     const element = harness.routeNativeElement!;
     for (const [field, value] of [['title', 'Fresh notebook'], ['price', '12.50'], ['stock', '3']]) {
       const input = element.querySelector<HTMLInputElement>(`#product-${field}`)!;
@@ -310,7 +386,9 @@ describe('Product form', () => {
     }
     element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     const created = { id: 1, title: 'Fresh notebook', price: 12.5, description: '', stock: 3, statusCode: 'ACTIVE' };
-    http.expectOne('/api/users/me/products').flush(created);
+    const saved = http.expectOne(mode === 'edit' ? '/api/users/me/products/42' : '/api/users/me/products');
+    expect(saved.request.method).toBe(mode === 'edit' ? 'PUT' : 'POST');
+    saved.flush(created);
     await harness.fixture.whenStable();
     http.expectOne(listingUrl).flush([created]);
     harness.detectChanges();

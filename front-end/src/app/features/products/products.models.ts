@@ -21,6 +21,9 @@ export interface CreateProductRequest {
   stock: number;
 }
 
+/** Replacement fields; omitted or null description clears the existing description. */
+export interface UpdateProductRequest extends CreateProductRequest {}
+
 /** Request pagination only: the endpoint returns an array without total counts. */
 export interface ProductPagination {
   /** Zero-based integer from 0 through 2_147_483_647. Defaults to 0. */
