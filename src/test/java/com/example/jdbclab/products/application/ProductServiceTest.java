@@ -1,6 +1,7 @@
 package com.example.jdbclab.products.application;
 
 import java.util.List;
+import java.util.Optional;
 import java.math.BigDecimal;
 import com.example.jdbclab.products.domain.OwnedProduct;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,35 @@ import static org.mockito.Mockito.*;
 class ProductServiceTest {
     private final ProductRepository repository = mock(ProductRepository.class);
     private final ProductService service = new ProductService(repository);
+
+    @Test
+    void lookupDelegatesBothIdsAndReturnsActiveInactiveAndZeroStockProducts() {
+        for (String status : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (long stock : new long[]{0, 5}) {
+                var product = new OwnedProduct(8L, "Product", BigDecimal.ONE, "Description", stock, status);
+                when(repository.findByIdAndOwnerId(8L, 7L)).thenReturn(Optional.of(product));
+                assertThat(service.findByIdAndOwnerId(8L, 7L)).isSameAs(product);
+            }
+        }
+        verify(repository, times(4)).findByIdAndOwnerId(8L, 7L);
+    }
+
+    @Test
+    void emptyLookupAlwaysUsesTheSameNotFoundException() {
+        when(repository.findByIdAndOwnerId(8L, 7L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.findByIdAndOwnerId(8L, 7L))
+                .isInstanceOf(ProductNotFoundException.class).hasMessage("Product with id 8 was not found.");
+        verify(repository).findByIdAndOwnerId(8L, 7L);
+    }
+
+    @Test
+    void lookupRejectsInvalidIdsBeforePersistence() {
+        for (Long id : new Long[]{null, 0L, -1L}) {
+            assertThatIllegalArgumentException().isThrownBy(() -> service.findByIdAndOwnerId(id, 7L));
+        }
+        assertThatNullPointerException().isThrownBy(() -> service.findByIdAndOwnerId(8L, null));
+        verifyNoInteractions(repository);
+    }
 
     @Test
     void delegatesTrustedOwnerAndUsesLongOffsetArithmetic() {

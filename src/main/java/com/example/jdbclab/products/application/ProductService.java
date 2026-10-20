@@ -15,6 +15,15 @@ public class ProductService {
         this.repository = repository;
     }
 
+    public OwnedProduct findByIdAndOwnerId(Long productId, Long ownerUserId) {
+        Objects.requireNonNull(ownerUserId, "Owner user ID is required.");
+        if (productId == null || productId <= 0) {
+            throw new IllegalArgumentException("Product ID must be positive.");
+        }
+        return repository.findByIdAndOwnerId(productId, ownerUserId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+    }
+
     public List<OwnedProduct> findByOwnerId(Long ownerUserId, int page, int pageSize) {
         Objects.requireNonNull(ownerUserId, "Owner user ID is required.");
         if (page < 0) throw new IllegalArgumentException("Page must be non-negative.");

@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,6 +37,25 @@ public class ProductController {
     public ProductController(ProductService products, UserService users) {
         this.products = products;
         this.users = users;
+    }
+
+    @Operation(summary = "Find my product by ID", description = "Owner is resolved from the bearer token. Includes inactive and zero-stock products; excludes deleted products.")
+    @ApiResponse(responseCode = "200", description = "Product found",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OwnedProduct.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid product ID",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer token is missing, invalid, expired, or its user no longer exists",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "404", description = "Product is missing, owned by another user, or deleted",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected failure; details are sanitized",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @GetMapping("/{id}")
+    public OwnedProduct findMineById(
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt principal,
+            @Parameter(description = "Positive product ID", example = "1") @PathVariable @Positive Long id) {
+        var currentUser = users.findCurrentUser(principal.getSubject());
+        return products.findByIdAndOwnerId(id, currentUser.id());
     }
 
     @Operation(summary = "List my products", description = "Current user's non-deleted products, including inactive and zero-stock products, ordered by ID. Pages start at zero; returns an array without total counts.")

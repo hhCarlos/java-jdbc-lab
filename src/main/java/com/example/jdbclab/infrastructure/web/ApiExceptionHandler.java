@@ -25,8 +25,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
-    @ExceptionHandler(ProductNotFoundException.class)
-    public ProblemDetail handleProductNotFound(ProductNotFoundException exception) {
+    @ExceptionHandler({ProductNotFoundException.class,
+            com.example.jdbclab.products.application.ProductNotFoundException.class})
+    public ProblemDetail handleProductNotFound(RuntimeException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 

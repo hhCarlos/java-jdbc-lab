@@ -1,32 +1,34 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T19:45:17-06:00
+Recorded at: 2026-10-19T19:51:53-06:00
 
 Task prompt:
 
-Add a repository operation for retrieving one product owned by a specific user.
+Expose the existing owner-scoped product lookup through the application service and REST controller.
 
-Follow AGENTS.md and all applicable database rules. Inspect the existing products repository, JDBC implementation, domain models, and owner-listing query.
+Follow AGENTS.md and all applicable task prerequisites.
+
+Endpoint:
+GET /users/me/products/{id}
 
 Requirements:
-- Extend the existing repository abstraction and JdbcTemplate implementation.
-- Accept both product ID and owner user ID, using existing ID types.
-- Use a clear method name such as findByIdAndOwnerId.
-- Return Optional of the existing appropriate product model.
-- Filter by product ID and user_id in the SQL query itself.
-- Include ACTIVE and INACTIVE products, including products with zero stock.
-- Exclude DELETED products using stable status codes and existing query conventions.
-- Return Optional.empty() when the product does not exist, belongs to another user, or is deleted.
-- Use parameterized SQL and reuse the existing row mapper where appropriate.
-- Return the fields needed by the edit form, including description and status code.
-- Preserve existing listing, creation, and public catalog behavior.
+- Add the lookup use case to the existing products application layer.
+- Delegate persistence to the repository operation already implemented.
+- Keep the application service independent of HTTP and Spring Security types.
+- Add the endpoint to the existing owner-products controller.
+- Require a valid bearer JWT.
+- Resolve the owner through the same authenticated-user mechanism as existing owner-product operations.
+- Never accept an owner user ID from the client.
+- Validate the product ID according to existing conventions.
+- Return HTTP 200 with the product's ID, title, price, description, stock, and status code.
+- Return the same HTTP 404 response when the product is missing, belongs to another user, or is deleted.
+- Allow owners to retrieve inactive and zero-stock products.
+- Preserve existing authentication behavior, including handling a nonexistent authenticated account.
+- Reuse existing response models and exception handling where appropriate.
+- Document the endpoint and bearer requirement in OpenAPI.
 
-Do not add application services, controllers, JWT handling, frontend changes, or schema changes.
+Preserve existing listing, creation, and public catalog behavior. Do not add update operations, frontend integration, or schema changes.
 
-Add focused repository tests covering:
-- An owner retrieves their product.
-- Another owner's product is not returned.
-- Missing and deleted products are not returned.
-- Inactive and zero-stock products remain retrievable by their owner.
+Add focused service and HTTP/security tests covering successful retrieval, ownership isolation, missing/deleted products, inactive/zero-stock products, invalid IDs, and missing/invalid authentication.
 
-Run the relevant tests. Report results, show the final SQL and parameter order, and distinguish actual database verification from mocked tests.
+Run relevant tests and report results. Provide a sample authenticated request using the application's configured port.

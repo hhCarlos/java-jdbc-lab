@@ -31,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Uses real Bearer headers, the production filter chain and decoder, and isolated H2. */
 @SpringBootTest(classes = JdbcLabApplication.class, properties = {
         "spring.profiles.active=", "app.dev-db-reset=false", "auth.jwt.issuer=access-test",
+        "springdoc.api-docs.enabled=true", "springdoc.override-with-generic-response=false",
         "spring.datasource.url=jdbc:h2:mem:jwtaccess;MODE=Oracle;DB_CLOSE_DELAY=-1",
         "spring.datasource.username=sa", "spring.datasource.password=",
         "spring.datasource.driver-class-name=org.h2.Driver"})
@@ -84,6 +85,74 @@ class UserAccessSecurityTest {
     private void product(int owner, String title, String status, int stock) {
         jdbc.update("INSERT INTO products (user_id, title, price, stock, status_id) VALUES (?, ?, ?, ?, (SELECT id FROM product_statuses WHERE code = ?))",
                 owner, title, new java.math.BigDecimal("12.34"), stock, status);
+    }
+
+    @Test
+    void retrievesOwnProductIncludingInactiveAndZeroStockWithAllEditFields() throws Exception {
+        createProducts();
+        for (String state : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (int stock : new int[]{0, 5}) {
+                product(1, "My product", state, stock);
+                Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+                jdbc.update("UPDATE products SET description = ? WHERE id = ?", "Edit description", id);
+                mvc.perform(get("/users/me/products/" + id)
+                                .header("Authorization", "Bearer " + tokens.issue(1L).value())
+                                .param("ownerUserId", "2"))
+                        .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(6))
+                        .andExpect(jsonPath("$.id").value(id))
+                        .andExpect(jsonPath("$.title").value("My product"))
+                        .andExpect(jsonPath("$.price").value(12.34))
+                        .andExpect(jsonPath("$.description").value("Edit description"))
+                        .andExpect(jsonPath("$.stock").value(stock))
+                        .andExpect(jsonPath("$.statusCode").value(state));
+            }
+        }
+    }
+
+    @Test
+    void lookupReturnsIdentical404ForOtherOwnerMissingAndDeletedProduct() throws Exception {
+        createProducts();
+        product(2, "Private", "ACTIVE", 5);
+        Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+        String header = "Bearer " + tokens.issue(1L).value();
+        String path = "/users/me/products/" + id;
+        String first = mvc.perform(get(path).header("Authorization", header).param("ownerUserId", "2"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Product with id " + id + " was not found."))
+                .andReturn().getResponse().getContentAsString();
+        jdbc.update("UPDATE products SET user_id = ?, status_id = (SELECT id FROM product_statuses WHERE code = ?) WHERE id = ?",
+                1L, "DELETED", id);
+        mvc.perform(get(path).header("Authorization", header)).andExpect(status().isNotFound())
+                .andExpect(content().json(first));
+        jdbc.update("DELETE FROM products WHERE id = ?", id);
+        mvc.perform(get(path).header("Authorization", header)).andExpect(status().isNotFound())
+                .andExpect(content().json(first));
+    }
+
+    @Test
+    void lookupRejectsInvalidProductIds() throws Exception {
+        for (String id : new String[]{"0", "-1", "no", "1.5", "9223372036854775808"}) {
+            mvc.perform(get("/users/me/products/" + id)
+                            .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400));
+        }
+        mvc.perform(head("/users/me/products/1")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/users/me/products/1").param("access_token", tokens.issue(1L).value()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void openApiDocumentsOwnerLookupAndBearerAuthentication() throws Exception {
+        mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].get.security[0].bearerAuth").isArray())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].get.responses['200'].content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/OwnedProduct"))
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].get.responses['400']").exists())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].get.responses['401']").exists())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].get.responses['404']").exists())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].get.parameters", hasSize(1)))
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].get.parameters[0].name").value("id"));
     }
 
     @Test
@@ -204,7 +273,7 @@ class UserAccessSecurityTest {
     }
 
     private void unauthorized(String authorization) throws Exception {
-        for (String path : new String[]{"/users", "/users/2", "/users/me", "/users/me/products"}) {
+        for (String path : new String[]{"/users", "/users/2", "/users/me", "/users/me/products", "/users/me/products/1"}) {
             var request = get(path);
             if (authorization != null) request.header("Authorization", authorization);
             mvc.perform(request).andExpect(status().isUnauthorized())
@@ -277,6 +346,10 @@ class UserAccessSecurityTest {
         for (String value : new String[]{token, tokens.issue(999L).value(),
                 signed(claims().subject("not-an-id").build(), MacAlgorithm.HS256),
                 signed(claims().subject("9223372036854775808").build(), MacAlgorithm.HS256)}) {
+            mvc.perform(get("/users/me/products/1").header("Authorization", "Bearer " + value))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                    .andExpect(jsonPath("$.status").value(401));
             mvc.perform(get("/users/me/products").header("Authorization", "Bearer " + value))
                     .andExpect(status().isUnauthorized());
             mvc.perform(get("/users/me").header("Authorization", "Bearer " + value))
