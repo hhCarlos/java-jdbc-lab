@@ -2,36 +2,48 @@
 
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T20:35:08-06:00
+Recorded at: 2026-10-19T20:42:52-06:00
 
 ## Task prompt
 
-Add an owner-scoped product update operation to the existing backend repository.
+Implement the product-update application service and expose it through the existing owner-products controller.
 
-Follow AGENTS.md and all applicable database rules. Inspect the existing repository abstraction, JDBC implementation, product models, and status lookup conventions.
+Follow AGENTS.md and all applicable task prerequisites. Reuse the repository update operation already implemented.
 
-Requirements:
-- Extend the existing repository rather than creating a parallel implementation.
-- Accept product ID, owner user ID, replacement title, price, optional description, stock, and the target status code supplied by the application layer.
-- Use BigDecimal for price and existing types for IDs and stock.
-- Update editable fields and status together in one parameterized SQL statement.
-- Resolve the target status through its stable code using existing conventions.
-- Include product ID, owner user ID, and allowed current statuses in the UPDATE conditions.
-- Only ACTIVE and INACTIVE products may be updated. Never update or restore DELETED products.
+Endpoint:
+PUT /users/me/products/{id}
+
+Request:
+- title: required, nonblank, maximum 50 characters.
+- price: required, non-negative, fitting NUMBER(12,2) without silent rounding.
+- description: optional; omitted or null clears the description.
+- stock: required, non-negative whole number within the database column's range.
+
+Application behavior:
+- Resolve ownership from the existing authenticated-user mechanism.
+- Keep application services independent of HTTP and Spring Security types.
+- Load the owner's current product and apply existing business rules.
+- ACTIVE with new stock zero becomes INACTIVE.
+- ACTIVE with positive stock remains ACTIVE.
+- INACTIVE remains INACTIVE, including when restocked.
+- Never update or restore DELETED products.
+- Do not expose owner ID or status as writable request fields.
+- Perform lookup, status decision, update, and response retrieval within one transaction.
+- Check the repository's affected-row result; never report success when nothing was updated.
 - Preserve product ID and ownership.
-- Treat a null description as clearing the stored description.
-- Do not insert when no matching product exists.
-- Return an affected-row result allowing the application layer to distinguish a successful update from no matching product.
-- Leave business validation and the decision about the target status to the application layer.
+- Never create a product when the requested ID does not exist.
 
-Do not add services, controllers, frontend changes, migrations, or automatic commits.
+Controller:
+- Require a valid bearer JWT.
+- Validate the path ID and request using existing conventions.
+- Return 200 with the updated product.
+- Return the same 404 response for missing, deleted, or another user's product.
+- Return 400 for invalid input.
+- Preserve existing authentication and exception handling.
+- Document the endpoint, replacement semantics, and responses in OpenAPI.
 
-Add focused repository tests covering:
-- Updating all supplied fields and status.
-- Clearing the description.
-- Ownership isolation.
-- Missing and deleted products remaining unchanged.
-- Updating inactive products.
-- An invalid target status failing without partially changing product data.
+Preserve existing creation, listing, lookup, and public catalog behavior. Update relevant business-rule documentation where needed. Do not modify the frontend or schema.
 
-Run relevant tests using the existing isolated database setup. Report results, show the final SQL and parameter order, and distinguish Oracle verification from H2 or mocked tests.
+Add focused service and HTTP/security tests for successful updates, validation, ownership isolation, status transitions, description clearing, repeated identical requests, and missing authentication.
+
+Run relevant tests. Report results and provide a sample authenticated PUT request.

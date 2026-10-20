@@ -262,6 +262,105 @@ class UserAccessSecurityTest {
         }
     }
 
+
+    @Test
+    void replacementPreservesIdentityAndStatusRulesAndIsRepeatable() throws Exception {
+        createProducts();
+        for (String initial : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (int stock : new int[]{0, 5}) {
+                product(1, "Old", initial, 3);
+                Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+                String path = "/users/me/products/" + id;
+                String body = "{\"title\":\"Updated\",\"price\":9999999999.99,\"stock\":" + stock
+                        + ",\"description\":\"New description\",\"ownerUserId\":2,\"statusCode\":\"DELETED\"}";
+                for (int repeat = 0; repeat < 2; repeat++) {
+                    mvc.perform(put(path).contentType(MediaType.APPLICATION_JSON).content(body)
+                                    .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                            .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id))
+                            .andExpect(jsonPath("$.title").value("Updated"))
+                            .andExpect(jsonPath("$.price").value(9999999999.99))
+                            .andExpect(jsonPath("$.stock").value(stock))
+                            .andExpect(jsonPath("$.description").value("New description"))
+                            .andExpect(jsonPath("$.statusCode").value(initial.equals("ACTIVE") && stock > 0 ? "ACTIVE" : "INACTIVE"));
+                }
+                for (String description : new String[]{"", ",\"description\":null"}) {
+                    mvc.perform(put(path).contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"title\":\"Updated\",\"price\":0,\"stock\":9999999999" + description + "}")
+                                    .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                            .andExpect(status().isOk()).andExpect(jsonPath("$.description").isEmpty());
+                    org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                            "SELECT description FROM products WHERE id = ?", String.class, id)).isNull();
+                }
+                org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                        "SELECT user_id FROM products WHERE id = ?", Long.class, id)).isEqualTo(1L);
+            }
+        }
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isEqualTo(4);
+    }
+
+    @Test
+    void replacementHidesOtherOwnerDeletedAndMissingProductsWithIdentical404() throws Exception {
+        createProducts();
+        product(2, "Private", "ACTIVE", 5);
+        Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+        String path = "/users/me/products/" + id;
+        String body = "{\"title\":\"New\",\"price\":1,\"stock\":1}";
+        String first = mvc.perform(put(path).contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT title FROM products WHERE id = ?", String.class, id)).isEqualTo("Private");
+        jdbc.update("UPDATE products SET user_id = 1, status_id = (SELECT id FROM product_statuses WHERE code = 'DELETED') WHERE id = ?", id);
+        mvc.perform(put(path).contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                .andExpect(status().isNotFound()).andExpect(content().json(first));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT title FROM products WHERE id = ?", String.class, id)).isEqualTo("Private");
+        jdbc.update("DELETE FROM products WHERE id = ?", id);
+        mvc.perform(put(path).contentType(MediaType.APPLICATION_JSON).content(body)
+                        .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                .andExpect(status().isNotFound()).andExpect(content().json(first));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isZero();
+    }
+
+    @Test
+    void invalidReplacementInputIs400AndDoesNotChangeProduct() throws Exception {
+        for (String id : new String[]{"0", "-1", "no", "1.5", "9223372036854775808"}) {
+            mvc.perform(put("/users/me/products/" + id).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"title\":\"Valid\",\"price\":1,\"stock\":1}")
+                            .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                    .andExpect(status().isBadRequest());
+        }
+        createProducts();
+        product(1, "Original", "ACTIVE", 3);
+        String valid = "{\"title\":\"Product\",\"price\":1.00,\"stock\":1}";
+        for (String body : new String[]{"{}", "null", "{", valid.replace("Product", " "),
+                valid.replace("Product", "x".repeat(51)), valid.replace("1.00", "-1"),
+                valid.replace("1.00", "0.001"), valid.replace("1.00", "10000000000"),
+                valid.replace("1.00", "null"), valid.replace("\"stock\":1", "\"stock\":null"),
+                valid.replace("\"stock\":1", "\"stock\":-1"),
+                valid.replace("\"stock\":1", "\"stock\":1.5"),
+                valid.replace("\"stock\":1", "\"stock\":10000000000")}) {
+            mvc.perform(put("/users/me/products/1").contentType(MediaType.APPLICATION_JSON)
+                            .header("Authorization", "Bearer " + tokens.issue(1L).value()).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT title FROM products", String.class)).isEqualTo("Original");
+    }
+
+    @Test
+    void replacementRejectsMissingInvalidExpiredAndUnavailableUserTokens() throws Exception {
+        jdbc.update("DELETE FROM users WHERE id = ?", 1);
+        for (String token : new String[]{null, "not-a-jwt", tokens.issue(1L).value(), tokens.issue(999L).value(),
+                signed(claims().expiresAt(Instant.now().minusSeconds(1)).build(), MacAlgorithm.HS256)}) {
+            var request = put("/users/me/products/1").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"title\":\"Product\",\"price\":1.00,\"stock\":1}");
+            if (token != null) request.header("Authorization", "Bearer " + token);
+            mvc.perform(request).andExpect(status().isUnauthorized())
+                    .andExpect(header().string("WWW-Authenticate", "Bearer"));
+        }
+    }
+
+
     private String signed(JwtClaimsSet claims, MacAlgorithm algorithm) {
         return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSigningKey))
                 .encode(JwtEncoderParameters.from(JwsHeader.with(algorithm).build(), claims)).getTokenValue();

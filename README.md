@@ -729,3 +729,17 @@ With the configured default port 8080:
 ```sh
 curl http://localhost:8080/users/me -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
+
+### Owner product replacement
+
+`PUT /users/me/products/{id}` requires a bearer JWT and replaces title, price,
+description, and stock. Title, price, and stock are required; omitted or null
+description clears the existing value. Validation matches product creation:
+nonblank title up to 50 characters, non-negative NUMBER(12,2) price without
+rounding, and integer stock from 0 to 9999999999. ID and ownership are preserved;
+client owner/status fields are ignored. ACTIVE with zero stock becomes INACTIVE;
+positive stock preserves ACTIVE, and INACTIVE remains INACTIVE even when restocked.
+Missing, deleted, and other owners' products return the same 404. No product is
+created or restored. Lookup, status selection, affected-row verification, and
+readback run in one transaction. Identical repeated replacements return 200 with
+the same product values. Invalid input returns 400; missing/invalid JWT returns 401.

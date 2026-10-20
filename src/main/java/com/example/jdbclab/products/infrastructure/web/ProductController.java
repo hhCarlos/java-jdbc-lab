@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -95,6 +96,27 @@ public class ProductController {
         var currentUser = users.findCurrentUser(principal.getSubject());
         return ResponseEntity.status(201).body(products.create(currentUser.id(), request.title(),
                 request.price(), request.description(), request.stock().longValueExact()));
+    }
+
+    @Operation(summary = "Replace my product fields", description = "Replaces title, price, description and stock. Omitted or null description clears it. Owner is resolved from the bearer token; client ownership and status fields are ignored. ACTIVE becomes INACTIVE at zero stock; INACTIVE remains INACTIVE when restocked. Deleted products cannot be updated.")
+    @ApiResponse(responseCode = "200", description = "Product updated",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OwnedProduct.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid product ID, JSON, or product input",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer token is missing, invalid, expired, or its user no longer exists",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "404", description = "Product is missing, owned by another user, or deleted",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected failure; details are sanitized",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @PutMapping("/{id}")
+    public OwnedProduct update(
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt principal,
+            @Parameter(description = "Positive product ID", example = "1") @PathVariable @Positive Long id,
+            @Valid @RequestBody UpdateProductRequest request) {
+        var currentUser = users.findCurrentUser(principal.getSubject());
+        return products.update(id, currentUser.id(), request.title(), request.price(),
+                request.description(), request.stock().longValueExact());
     }
 
 }

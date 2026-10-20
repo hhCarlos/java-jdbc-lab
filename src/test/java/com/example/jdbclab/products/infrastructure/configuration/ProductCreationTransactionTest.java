@@ -51,4 +51,30 @@ class ProductCreationTransactionTest {
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM creation_effect", Long.class)).isZero();
         }
     }
+    @Test
+    void updateLookupWriteAndReadbackShareTransactionAndReadbackFailureRollsBack() {
+        try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
+            var jdbc = context.getBean(JdbcTemplate.class);
+            jdbc.execute("CREATE TABLE update_effect (id BIGINT PRIMARY KEY)");
+            var repository = context.getBean(ProductRepository.class);
+            var current = new com.example.jdbclab.products.domain.OwnedProduct(
+                    8L, "Old", BigDecimal.ONE, null, 1, "ACTIVE");
+            var reads = new java.util.concurrent.atomic.AtomicInteger();
+            when(repository.findByIdAndOwnerId(8L, 7L)).thenAnswer(invocation -> {
+                assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
+                if (reads.incrementAndGet() == 2) throw new IllegalStateException("Readback failed");
+                return java.util.Optional.of(current);
+            });
+            when(repository.update(8L, 7L, "New", BigDecimal.ONE, null, 0, "INACTIVE"))
+                    .thenAnswer(invocation -> {
+                        assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
+                        jdbc.update("INSERT INTO update_effect VALUES (?)", 8);
+                        return 1;
+                    });
+            assertThatThrownBy(() -> context.getBean(ProductService.class)
+                    .update(8L, 7L, "New", BigDecimal.ONE, null, 0))
+                    .isInstanceOf(IllegalStateException.class).hasMessage("Readback failed");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM update_effect", Long.class)).isZero();
+        }
+    }
 }
