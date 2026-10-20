@@ -10,7 +10,7 @@ and add it to the standalone component's `imports` array.
 </span>
 ```
 
-`name` is the expected input. Supported names are `products`, `profile`, `logout`, `edit`, `not-found`, and `default`
+`name` is the expected input. Supported names are `products`, `profile`, `logout`, `edit`, `success`, `error`, `warning`, `loader`, `not-found`, and `default`
 (an alias for `not-found`). Omitted, null, undefined, blank, and unknown names
 render `not-found`. Names are matched exactly through `ICON_REGISTRY`; arbitrary
 input cannot select an unregistered sprite symbol.
@@ -31,12 +31,20 @@ The new icons preserve their original viewBoxes and artwork transforms:
 | `profile` | `0 0 30.586 30.586` | Fill |
 | `logout` | `0 0 24 24` | Stroke |
 | `edit` | `0 0 24 24` | Stroke |
+| `success` | `0 0 36 36` | Fill |
+| `error` | `0 0 64 64` | Fill (even-odd) |
+| `warning` | `0 0 64 64` | Fill |
+| `loader` | `0 0 24 24` | Stroke |
 
 ```html
 <app-icon name="products" />
 <app-icon name="profile" size="xl" label="Profile" />
 <app-icon name="logout" size="sm" label="Log out" />
 <app-icon name="edit" label="Edit" />
+<app-icon name="success" label="Success" />
+<app-icon name="error" label="Error" />
+<app-icon name="warning" label="Warning" />
+<app-icon name="loader" label="Loading" />
 ```
 
 Sizes use global tokens in `src/styles/abstracts/_tokens.scss`:

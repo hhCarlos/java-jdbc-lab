@@ -6,6 +6,10 @@ export const ICON_REGISTRY = {
   profile: 'profile',
   logout: 'logout',
   edit: 'edit',
+  success: 'success',
+  error: 'error',
+  warning: 'warning',
+  loader: 'loader',
 } as const satisfies Readonly<Record<string, string>>;
 
 export type IconName = keyof typeof ICON_REGISTRY;
