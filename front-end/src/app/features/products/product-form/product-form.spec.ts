@@ -12,10 +12,11 @@ import { routes } from '../../../app.routes';
 import { SessionService } from '../../auth/session.service';
 import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
 import { ProductForm } from './product-form';
+import { NotificationService } from '../../../layouts/app-layout/services/notification.service';
 
 describe('Product form', () => {
   beforeEach(() => TestBed.configureTestingModule({
-    providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
+    providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting(), NotificationService],
   }));
   beforeEach(() => {
     Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
@@ -119,7 +120,11 @@ describe('Product form', () => {
     const request = http.expectOne('/api/users/me/products/9007199254740993');
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({ title: 'Notebook', price: 12.5, description: '', stock: 3 });
+    expect(TestBed.inject(NotificationService).current()).toBeNull();
     request.flush({ ...product, price: 12.5 });
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({
+      status: 'success', message: 'Product updated successfully.',
+    });
     expect(form.pristine).toBe(true);
     expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
     expect(create).not.toHaveBeenCalled();
@@ -128,7 +133,6 @@ describe('Product form', () => {
   });
 
   it('preserves failed update values for retry and releases the loader on failure and cancellation', () => {
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const { fixture, input, submit, form, button } = editSetup('42');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const http = TestBed.inject(HttpTestingController);
@@ -141,7 +145,9 @@ describe('Product form', () => {
     expect(form.getRawValue()).toEqual(values);
     expect(form.dirty).toBe(true);
     expect(navigate).not.toHaveBeenCalled();
-    expect(log).toHaveBeenCalledExactlyOnceWith('Unable to update product. Please try again.');
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({
+      status: 'error', message: 'Unable to update the product. Please try again.',
+    });
     const loader = TestBed.inject(BlockingLoaderService);
     expect(loader.visible()).toBe(false);
     expect(button('Save changes').disabled).toBe(false);
@@ -154,7 +160,6 @@ describe('Product form', () => {
     expect(loader.visible()).toBe(true);
     releaseOther();
     expect(loader.visible()).toBe(false);
-    log.mockRestore();
   });
 
   it('shows unavailable feedback and returns to Products after 404', () => {
@@ -320,7 +325,11 @@ describe('Product form', () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(form.dirty).toBe(true);
     expect(TestBed.inject(BlockingLoaderService).visible()).toBe(true);
+    expect(TestBed.inject(NotificationService).current()).toBeNull();
     request.flush({ id: 1 });
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({
+      status: 'success', message: 'Product created successfully.',
+    });
     expect(form.pristine).toBe(true);
     expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
     expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
@@ -330,7 +339,6 @@ describe('Product form', () => {
   });
 
   it('prevents duplicates and preserves failed values for retry', () => {
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const { fixture, input, submit, form, button } = setup();
     input('title', 'Notebook'); input('price', '0012.50');
@@ -346,13 +354,14 @@ describe('Product form', () => {
     expect(form.getRawValue()).toEqual(values);
     expect(form.dirty).toBe(true);
     expect(navigate).not.toHaveBeenCalled();
-    expect(log).toHaveBeenCalledExactlyOnceWith('Unable to create product. Please try again.');
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({
+      status: 'error', message: 'Unable to create the product. Please try again.',
+    });
     expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
     expect(fixture.componentInstance['submitting']()).toBe(false);
     expect(button('Create product').disabled).toBe(false);
     submit();
     TestBed.inject(HttpTestingController).expectOne('/api/users/me/products').flush({ id: 1 });
-    log.mockRestore();
   });
 
   it('cancels pending creation on destruction and releases only its loader', () => {
@@ -388,12 +397,19 @@ describe('Product form', () => {
     const created = { id: 1, title: 'Fresh notebook', price: 12.5, description: '', stock: 3, statusCode: 'ACTIVE' };
     const saved = http.expectOne(mode === 'edit' ? '/api/users/me/products/42' : '/api/users/me/products');
     expect(saved.request.method).toBe(mode === 'edit' ? 'PUT' : 'POST');
+    const notifications = harness.routeDebugElement!.injector.get(NotificationService);
+    expect(notifications.current()).toBeNull();
     saved.flush(created);
     await harness.fixture.whenStable();
     http.expectOne(listingUrl).flush([created]);
     harness.detectChanges();
     expect(TestBed.inject(Router).url).toBe('/app/products');
     expect(harness.routeNativeElement?.textContent).toContain('Fresh notebook');
+    expect(harness.routeDebugElement!.injector.get(NotificationService)).toBe(notifications);
+    const notification = harness.routeNativeElement?.querySelector('[aria-label="Notification"]');
+    expect(notification?.getAttribute('data-status')).toBe('success');
+    expect(notification?.textContent).toContain(mode === 'edit'
+      ? 'Product updated successfully.' : 'Product created successfully.');
     http.expectNone(() => true);
   });
 

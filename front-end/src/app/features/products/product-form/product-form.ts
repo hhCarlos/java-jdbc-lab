@@ -10,6 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AppInput } from '../../../shared/app-input/app-input';
 import { AppModal } from '../../../shared/app-modal/app-modal';
 import { AppButton } from '../../../shared/app-button/app-button';
+import { NotificationService } from '../../../layouts/app-layout/services/notification.service';
 
 const nonBlank: ValidatorFn = control =>
   typeof control.value === 'string' && control.value.trim().length > 0 ? null : { required: true };
@@ -47,6 +48,7 @@ export class ProductForm {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly service = inject(ProductsService);
   private readonly loader = inject(BlockingLoaderService);
+  private readonly notifications = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly submitting = signal(false);
   protected readonly cancelConfirmationOpen = signal(false);
@@ -156,9 +158,17 @@ export class ProductForm {
     ).subscribe({
       next: () => {
         this.form.markAsPristine();
+        this.notifications.publish({
+          status: 'success',
+          message: editing ? 'Product updated successfully.' : 'Product created successfully.',
+        });
         void this.router.navigate(['/app/products']);
       },
-      error: () => console.log(`Unable to ${editing ? 'update' : 'create'} product. Please try again.`),
+      error: () => this.notifications.publish({
+        status: 'error',
+        message: editing ? 'Unable to update the product. Please try again.'
+          : 'Unable to create the product. Please try again.',
+      }),
     });
   }
 

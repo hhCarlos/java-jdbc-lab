@@ -1,23 +1,30 @@
+# Latest task prompt
+
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T21:33:46-06:00
+Recorded at: 2026-10-19T21:36:28-06:00
 
-Task prompt:
+## Task prompt
 
-Refactor only the organization inside the existing app-layout directory.
+Integrate the existing AppLayout notifications into product creation and editing.
 
-Follow AGENTS.md and all applicable task prerequisites.
+Follow AGENTS.md and all applicable task prerequisites. Reuse the notification service's actual API.
 
-Requirements:
-- Keep AppLayout's own component files at the app-layout root so its lazy-loaded route path remains stable.
-- Group layout-owned child components under components/<component-name>/, keeping each component's TypeScript, template, styles, and tests together.
-- Group existing layout-scoped services under services/.
-- Add a models/ directory only if existing standalone model files need a home.
-- Inspect actual files before moving them; do not create empty folders or move components from elsewhere into this scope.
-- Update affected imports, test references, and documentation paths.
-- Preserve component selectors, public APIs, service-provider scopes, notification state, navigation, and styling.
-- Account for relative Sass imports after moving files.
+- After successful creation, show a success notification:
+  "Product created successfully."
+- After successful update, show a success notification:
+  "Product updated successfully."
+- Preserve navigation to Products and fresh-list retrieval. The notification must remain visible after navigation.
+- On creation failure, show an error notification:
+  "Unable to create the product. Please try again."
+- On update failure, show an error notification:
+  "Unable to update the product. Please try again."
+- On failure, preserve form values and remain on the form, except when existing authentication handling requires redirecting.
+- Do not show success before the backend confirms the operation.
+- Preserve the existing blocking loader, cleanup, validation, and duplicate-submit prevention.
+- Replace the temporary generic console failure messages with these notifications.
+- Trigger notifications from the form component, not the HTTP service or interceptor.
 
-This is a structural refactor only. Do not integrate product notifications, change behavior, add abstractions or dependencies, or reorganize other features.
+Keep changes limited to these two operations. Do not add warning or loader notifications yet.
 
-Run affected tests and the Angular build. Report moved files, the resulting directory tree, and
+Update affected tests, run relevant frontend tests and the Angular build, and report results.
