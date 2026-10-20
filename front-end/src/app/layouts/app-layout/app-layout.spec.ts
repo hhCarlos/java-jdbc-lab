@@ -7,7 +7,7 @@ import { SessionService } from '../../features/auth/session.service';
 import { AppLayout } from './app-layout';
 import { ProductsService } from '../../features/products/products.service';
 import { of } from 'rxjs';
-import { NotificationService } from './notification.service';
+import { NotificationService } from './services/notification.service';
 
 @Component({ template: '' })
 class EmptyPage {}

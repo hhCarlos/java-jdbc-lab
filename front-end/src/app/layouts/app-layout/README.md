@@ -3,7 +3,7 @@ Inject NotificationService in a child page; do not provide it again there.
 
 ```ts
 import { inject } from '@angular/core';
-import { NotificationService } from './notification.service'; // Adjust relative path.
+import { NotificationService } from './services/notification.service'; // Adjust relative path.
 
 private readonly notifications = inject(NotificationService);
 

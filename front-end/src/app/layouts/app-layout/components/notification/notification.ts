@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { AppIcon } from '../../shared/app-icon/app-icon';
-import { NotificationService } from './notification.service';
+import { AppIcon } from '../../../../shared/app-icon/app-icon';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-notification',
