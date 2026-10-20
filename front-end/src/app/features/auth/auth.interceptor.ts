@@ -18,7 +18,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const token = session.getAccessToken();
   // Mirror the protected endpoints in the backend security configuration.
   const protectedRequest = (
-    ['GET', 'HEAD'].includes(request.method) && /^\/api\/users(?:\/[^/]+|\/me\/products)?$/.test(path)
+    ['GET', 'HEAD'].includes(request.method) && /^\/api\/users(?:\/[^/]+|\/me\/products(?:\/[0-9]+)?)?$/.test(path)
   ) || (request.method === 'POST' && path === '/api/users/me/products');
   return next(token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request).pipe(
     catchError((error: unknown) => {

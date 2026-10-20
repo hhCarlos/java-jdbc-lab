@@ -30,6 +30,31 @@ describe('ProductsService', () => {
 
   afterEach(() => http.verify());
 
+  it('GETs lazily using the exact ID and interceptor authentication', async () => {
+    const result = service.getById('9007199254740993');
+    http.expectNone(() => true);
+    const promise = firstValueFrom(result);
+    const pending = http.expectOne(`${endpoint}/9007199254740993`);
+    expect(pending.request.method).toBe('GET');
+    expect(pending.request.body).toBeNull();
+    expect(pending.request.headers.get('Authorization')).toBe('Bearer test-token');
+    const product: OwnedProduct = { id: 42, title: 'Book', price: 12.34, description: null, stock: 0, statusCode: 'ACTIVE' };
+    pending.flush(product);
+    expect(await promise).toEqual(product);
+  });
+
+  it.each([404, 401, 500])('preserves detail HTTP %s errors and session expiry', async status => {
+    const result = firstValueFrom(service.getById('42')).catch((error: unknown) => error);
+    const problem = { detail: 'Failure' };
+    http.expectOne(`${endpoint}/42`).flush(problem, { status, statusText: 'Error' });
+    const error = await result as HttpErrorResponse;
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    expect(error.status).toBe(status);
+    expect(error.error).toEqual(problem);
+    expect(TestBed.inject(SessionService).clear).toHaveBeenCalledTimes(status === 401 ? 1 : 0);
+    if (status === 401) expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/auth/login'], { replaceUrl: true });
+  });
+
   it('POSTs lazily with only editable fields, interceptor auth, and returns the created product', async () => {
     const input = {
       title: 'Book', price: 9999999999.99, stock: 9999999999, description: 'Details',

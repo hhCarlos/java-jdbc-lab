@@ -1,13 +1,20 @@
 <section class="product-form" [attr.aria-label]="mode() === 'edit' ? 'Edit product details' : 'New product details'">
   @if (mode() === 'edit') {
-    <p role="status">Editing products is not available yet.</p>
+    <p role="status">Saving changes is not available yet.</p>
+    @if (loading()) {
+      <p role="status">Loading product…</p>
+    }
     @if (editError(); as error) {
       <p role="alert">{{ error }}</p>
+      @if (recoverable()) {
+        <app-button label="Retry" (pressed)="retry()" />
+      }
+      <app-button label="Back to Products" (pressed)="leaveWithoutSaving()" />
     }
   } @else {
     <p class="product-form__instructions">All fields except description are required.</p>
   }
-  <form class="product-form__form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="submitting()" novalidate>
+  <form class="product-form__form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="loading() || submitting()" novalidate>
     <app-input label="Title" inputId="product-title" formControlName="title" />
     <app-input label="Price" inputId="product-price" formControlName="price"
       inputMode="decimal" [errorMessages]="priceErrors" />

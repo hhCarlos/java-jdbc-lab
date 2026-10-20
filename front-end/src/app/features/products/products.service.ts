@@ -8,6 +8,11 @@ import { CreateProductRequest, OwnedProduct, ProductPagination } from './product
 export class ProductsService {
   private readonly http = inject(HttpClient);
 
+  /** Loads an owned product; authentication and HTTP errors remain with the HTTP pipeline. */
+  getById(id: string): Observable<OwnedProduct> {
+    return this.http.get<OwnedProduct>(`/api/users/me/products/${encodeURIComponent(id)}`);
+  }
+
   /** Creates a product; the backend validates values and assigns ownership and status. */
   create({ title, price, description, stock }: CreateProductRequest): Observable<OwnedProduct> {
     const body: CreateProductRequest = { title, price, stock };

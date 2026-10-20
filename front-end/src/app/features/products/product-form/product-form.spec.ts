@@ -60,16 +60,91 @@ describe('Product form', () => {
     return { ...setup(), data, paramMap };
   }
 
+  const product = { id: 42, title: 'Notebook', price: 12.345, description: null, stock: 3, statusCode: 'ACTIVE' };
+
+  it('populates exact text values pristine and untouched, keeping edit submission blocked', () => {
+    const { fixture, form, submit, button } = editSetup('42');
+    const create = vi.spyOn(TestBed.inject(ProductsService), 'create');
+    expect(form.disabled).toBe(true);
+    expect(fixture.componentInstance['loading']()).toBe(true);
+    TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush(product);
+    fixture.detectChanges();
+    expect(form.getRawValue()).toEqual({ title: 'Notebook', price: '12.345', description: '', stock: '3' });
+    expect(form.pristine).toBe(true);
+    expect(form.untouched).toBe(true);
+    expect(form.enabled).toBe(true);
+    expect(fixture.componentInstance['loading']()).toBe(false);
+    expect(button('Save changes').disabled).toBe(true);
+    submit();
+    expect(create).not.toHaveBeenCalled();
+    form.markAsDirty();
+    button('Cancel').click();
+    expect(fixture.componentInstance['cancelConfirmationOpen']()).toBe(true);
+  });
+
+  it('shows unavailable feedback and returns to Products after 404', () => {
+    const { fixture, element, form, button } = editSetup('42');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush({}, { status: 404, statusText: 'Not found' });
+    fixture.detectChanges();
+    expect(element.textContent).toContain('This product is unavailable.');
+    expect(form.disabled).toBe(true);
+    expect(fixture.componentInstance['loading']()).toBe(false);
+    expect(element.textContent).not.toContain('Retry');
+    button('Back to Products').click();
+    expect(navigate).toHaveBeenCalledWith(['/app/products']);
+  });
+
+  it.each([0, 500])('allows retry after load failure %s', status => {
+    const { fixture, form, button } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    const pending = http.expectOne('/api/users/me/products/42');
+    if (status === 0) pending.error(new ProgressEvent('error'));
+    else pending.flush({}, { status, statusText: 'Failure' });
+    fixture.detectChanges();
+    expect(form.disabled).toBe(true);
+    expect(fixture.componentInstance['loading']()).toBe(false);
+    button('Retry').click();
+    expect(fixture.componentInstance['loading']()).toBe(true);
+    http.expectOne('/api/users/me/products/42').flush(product);
+    expect(form.enabled).toBe(true);
+    expect(fixture.componentInstance['editError']()).toBeNull();
+  });
+
+  it('cancels stale requests on route changes and clears loading on destruction', () => {
+    const { fixture, paramMap, form } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    const old = http.expectOne('/api/users/me/products/42');
+    paramMap.next(convertToParamMap({ id: '43' }));
+    expect(old.cancelled).toBe(true);
+    expect(fixture.componentInstance['loading']()).toBe(true);
+    http.expectOne('/api/users/me/products/43').flush({ ...product, title: 'Current' });
+    expect(form.getRawValue().title).toBe('Current');
+    paramMap.next(convertToParamMap({ id: '44' }));
+    const pending = http.expectOne('/api/users/me/products/44');
+    fixture.destroy();
+    expect(pending.cancelled).toBe(true);
+    expect(fixture.componentInstance['loading']()).toBe(false);
+  });
+
+  it('does not request product data in create mode with a route ID', () => {
+    const { form } = editSetup('42', 'create');
+    expect(form.enabled).toBe(true);
+    TestBed.inject(HttpTestingController).expectNone(() => true);
+  });
+
   it.each(['1', '9007199254740993', '9223372036854775807'])('disables edit mode for valid ID %s and blocks programmatic creation', id => {
     const { fixture, element, form, submit, button } = editSetup(id);
     const create = vi.spyOn(TestBed.inject(ProductsService), 'create');
     expect(fixture.componentInstance['mode']()).toBe('edit');
     expect(fixture.componentInstance['productId']()).toBe(id);
-    expect(element.textContent).toContain('Editing products is not available yet.');
+    expect(element.textContent).toContain('Saving changes is not available yet.');
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(form.disabled).toBe(true);
     expect(Array.from(element.querySelectorAll<HTMLInputElement>('input, textarea')).every(input => input.disabled)).toBe(true);
     expect(button('Save changes').disabled).toBe(true);
+    TestBed.inject(HttpTestingController).expectOne(`/api/users/me/products/${id}`).flush(product);
+    expect(form.enabled).toBe(true);
     // Even bypassing disabled controls must never turn edit submission into creation.
     form.enable();
     form.setValue({ title: 'Valid', price: '1', description: '', stock: '1' });
@@ -101,13 +176,16 @@ describe('Product form', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance['productId']()).toBe('42');
     expect(element.querySelector('[role="alert"]')).toBeNull();
+    const pending = TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42');
     data.next({ mode: 'create' });
+    expect(pending.cancelled).toBe(true);
     expect(form.enabled).toBe(true);
     expect(fixture.componentInstance['productId']()).toBeNull();
   });
 
   it('keeps Cancel navigation available in edit mode', () => {
     const { button } = editSetup('42');
+    TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush(product);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     button('Cancel').click();
     expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
@@ -120,8 +198,8 @@ describe('Product form', () => {
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Edit product');
     const route = TestBed.inject(Router).routerState.snapshot.root.firstChild!.firstChild!;
     expect(route.data).toEqual({ mode: 'edit', pageTitle: 'Edit product', pageSubtitle: 'Update your product details.' });
-    expect(harness.routeNativeElement?.textContent).toContain('Editing products is not available yet.');
-    TestBed.inject(HttpTestingController).expectNone(() => true);
+    expect(harness.routeNativeElement?.textContent).toContain('Saving changes is not available yet.');
+    TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush(product);
   });
 
   it('shows accessible required errors and focuses the first invalid field', () => {

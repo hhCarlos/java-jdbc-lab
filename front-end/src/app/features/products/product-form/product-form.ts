@@ -1,5 +1,6 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, defer, finalize } from 'rxjs';
+import { BehaviorSubject, EMPTY, catchError, combineLatest, defer, finalize, switchMap, tap } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
 import { CreateProductRequest } from '../products.models';
 import { ProductsService } from '../products.service';
@@ -38,6 +39,9 @@ export class ProductForm {
   // Preserve signed 64-bit IDs as text rather than rounding them to a JS number.
   protected readonly productId = signal<string | null>(null);
   protected readonly editError = signal<string | null>(null);
+  protected readonly loading = signal(false);
+  protected readonly recoverable = signal(false);
+  private readonly reload = new BehaviorSubject(0);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly service = inject(ProductsService);
@@ -60,20 +64,56 @@ export class ProductForm {
   };
 
   constructor() {
-    combineLatest([this.route.data, this.route.paramMap]).pipe(
+    combineLatest([this.route.data, this.route.paramMap, this.reload]).pipe(
+      switchMap(([data, params]) => {
+        const mode = data['mode'] === 'edit' ? 'edit' : 'create';
+        this.mode.set(mode);
+        const id = params.get('id');
+        const validId = id !== null && /^[0-9]+$/.test(id)
+          && BigInt(id) > 0n && BigInt(id) <= 9_223_372_036_854_775_807n;
+        this.productId.set(mode === 'edit' && validId ? id : null);
+        this.editError.set(null);
+        this.recoverable.set(false);
+        if (mode === 'create') {
+          this.form.enable();
+          return EMPTY;
+        }
+        this.form.reset();
+        this.form.disable();
+        if (!validId) {
+          this.editError.set('Invalid product ID. Enter a positive 64-bit integer product ID.');
+          return EMPTY;
+        }
+        this.loading.set(true);
+        return defer(() => this.service.getById(id!)).pipe(
+          tap(product => {
+            this.form.reset({
+              title: product.title,
+              price: String(product.price),
+              description: product.description ?? '',
+              stock: String(product.stock),
+            });
+            this.form.enable();
+          }),
+          catchError((error: unknown) => {
+            const status = error instanceof HttpErrorResponse ? error.status : undefined;
+            this.editError.set(status === 404 ? 'This product is unavailable.'
+              : status === 401 ? 'Your session has expired. Please sign in again.'
+              : status === 403 ? 'You do not have permission to view this product.'
+              : 'Unable to load product. Please try again.');
+            this.recoverable.set(status === undefined || status === 0 || status === 408
+              || status === 429 || status >= 500);
+            return EMPTY;
+          }),
+          finalize(() => this.loading.set(false)),
+        );
+      }),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(([data, params]) => {
-      const mode = data['mode'] === 'edit' ? 'edit' : 'create';
-      this.mode.set(mode);
-      const id = params.get('id');
-      const validId = id !== null && /^[0-9]+$/.test(id)
-        && BigInt(id) > 0n && BigInt(id) <= 9_223_372_036_854_775_807n;
-      this.productId.set(mode === 'edit' && validId ? id : null);
-      this.editError.set(mode === 'edit' && !validId
-        ? 'Invalid product ID. Enter a positive 64-bit integer product ID.' : null);
-      if (mode === 'edit') this.form.disable();
-      else this.form.enable();
-    });
+    ).subscribe();
+  }
+
+  protected retry(): void {
+    if (this.recoverable() && !this.loading()) this.reload.next(this.reload.value + 1);
   }
 
   protected submit(): void {

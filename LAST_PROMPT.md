@@ -1,34 +1,45 @@
+# Task prompt
+
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-19T19:51:53-06:00
+Recorded at: 2026-10-19T20:06:43-06:00
 
-Task prompt:
+## Task prompt
 
-Expose the existing owner-scoped product lookup through the application service and REST controller.
+Load the selected product into the existing ProductForm edit page. Limit implementation changes to front-end/ and the task record required by AGENTS.md.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Endpoint:
-GET /users/me/products/{id}
+ProductsService:
+- Add or reuse getById() calling GET /api/users/me/products/{id}.
+- Use typed models matching the existing backend response.
+- Rely on the existing authentication interceptor.
+- Return an Observable and preserve HTTP errors.
 
-Requirements:
-- Add the lookup use case to the existing products application layer.
-- Delegate persistence to the repository operation already implemented.
-- Keep the application service independent of HTTP and Spring Security types.
-- Add the endpoint to the existing owner-products controller.
-- Require a valid bearer JWT.
-- Resolve the owner through the same authenticated-user mechanism as existing owner-product operations.
-- Never accept an owner user ID from the client.
-- Validate the product ID according to existing conventions.
-- Return HTTP 200 with the product's ID, title, price, description, stock, and status code.
-- Return the same HTTP 404 response when the product is missing, belongs to another user, or is deleted.
-- Allow owners to retrieve inactive and zero-stock products.
-- Preserve existing authentication behavior, including handling a nonexistent authenticated account.
-- Reuse existing response models and exception handling where appropriate.
-- Document the endpoint and bearer requirement in OpenAPI.
+Edit flow:
+- Preserve the table's existing Edit navigation to /app/products/edit/{id}.
+- Fetch the product from ProductForm using the validated route ID, not from the table click handler.
+- Request data only in edit mode.
+- Populate title, price, description, and stock using the existing form-control representations without silently rounding values.
+- Mark the populated form pristine and untouched.
+- Handle route-ID changes without letting stale responses overwrite the current product.
+- Clean up subscriptions and loading state on completion or cancellation.
+- Preserve dirty-form Cancel confirmation.
 
-Preserve existing listing, creation, and public catalog behavior. Do not add update operations, frontend integration, or schema changes.
+Loading and errors:
+- Do not allow editing before loading succeeds.
+- Show loading feedback using existing conventions.
+- For 404, show an English product-unavailable message and a way back to Products.
+- For other recoverable failures, show feedback and allow retry.
+- Preserve existing authentication-expiry handling.
 
-Add focused service and HTTP/security tests covering successful retrieval, ownership isolation, missing/deleted products, inactive/zero-stock products, invalid IDs, and missing/invalid authentication.
+Saving edits is not implemented yet:
+- Keep edit submission disabled.
+- Never call create() from edit mode.
+- Preserve the complete creation flow unchanged.
 
-Run relevant tests and report results. Provide a sample authenticated request using the application's configured port.
+Do not change backend code or add update requests.
+
+Add focused tests for the GET request, form population, missing products, loading/error recovery, create-mode isolation, and preventing creation from edit mode.
+
+Run relevant frontend tests and the Angular build. Report results and manual verification steps.
