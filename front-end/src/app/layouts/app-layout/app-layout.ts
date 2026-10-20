@@ -5,11 +5,14 @@ import { ActivatedRoute, NavigationEnd, PRIMARY_OUTLET, Router, RouterOutlet } f
 import { PageHeader } from '../../shared/page-header/page-header';
 import { AppSidebar } from '../app-sidebar/app-sidebar';
 import { SessionService } from '../../features/auth/session.service';
+import { AppNotification } from './notification';
+import { NotificationService } from './notification.service';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [AppSidebar, PageHeader, RouterOutlet],
+  imports: [AppSidebar, PageHeader, RouterOutlet, AppNotification],
+  providers: [NotificationService],
   templateUrl: './app-layout.html',
   styleUrl: './app-layout.scss',
 })

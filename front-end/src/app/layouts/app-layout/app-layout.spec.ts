@@ -7,6 +7,7 @@ import { SessionService } from '../../features/auth/session.service';
 import { AppLayout } from './app-layout';
 import { ProductsService } from '../../features/products/products.service';
 import { of } from 'rxjs';
+import { NotificationService } from './notification.service';
 
 @Component({ template: '' })
 class EmptyPage {}
@@ -65,5 +66,19 @@ describe('AppLayout metadata', () => {
     await harness.fixture.whenStable();
     expect(TestBed.inject(SessionService).clear).toHaveBeenCalledOnce();
     expect(TestBed.inject(Router).url).toBe('/auth/login');
+  });
+
+  it('mounts one notification host and preserves child notifications across navigation', async () => {
+    const harness = await RouterTestingHarness.create('/app/products');
+    const service = harness.routeDebugElement!.injector.get(NotificationService);
+    const handle = service.publish({ status: 'loader', message: 'Still working' });
+    await harness.navigateByUrl('/app/profile');
+    expect(harness.routeDebugElement!.injector.get(NotificationService)).toBe(service);
+    expect(harness.routeNativeElement!.querySelectorAll('app-notification')).toHaveLength(1);
+    expect(harness.routeNativeElement!.querySelector('app-notification section')?.textContent).toContain('Still working');
+    handle.hide();
+    service.publish({ status: 'loader', message: 'Leaving' });
+    await harness.navigateByUrl('/auth/login');
+    expect(service.current()).toBeNull();
   });
 });

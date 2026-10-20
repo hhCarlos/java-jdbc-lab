@@ -1,0 +1,54 @@
+:host { position: fixed; top: var(--space-4); right: var(--space-4); z-index: var(--z-toast); width: min(26rem, calc(100% - var(--space-8))); }
+.announcement { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.notification {
+  --notification-status: var(--color-warning-text);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+  &[data-status='success'] { --notification-status: var(--color-success-indicator); }
+  &[data-status='error'] { --notification-status: var(--color-error-indicator); }
+  &[data-status='loader'] { --notification-status: var(--color-primary); }
+  &__icon { flex-shrink: 0; color: var(--notification-status); }
+  &[data-status='loader'] &__icon { animation: notification-spin 1s linear infinite; }
+  &__content { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  p { margin: 0; }
+  &__heading { font-weight: var(--font-weight-bold); }
+  &__close {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--font-size-xl);
+    cursor: pointer;
+    &:hover { background: var(--color-background); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+  &__progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--space-1);
+    background: var(--notification-status);
+    transform-origin: left;
+    animation: notification-fill var(--notification-duration) linear forwards;
+  }
+}
+@keyframes notification-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes notification-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .notification__icon, .notification__progress { animation: none !important; }
+}

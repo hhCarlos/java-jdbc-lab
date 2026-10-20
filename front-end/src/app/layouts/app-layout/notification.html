@@ -1,0 +1,32 @@
+<!-- Keep live regions mounted so subsequent content changes are announced. -->
+<div role="status" aria-live="polite" aria-atomic="true">
+  @if (notifications.current(); as notification) {
+    @if (notification.status !== 'error') {
+      <span class="announcement">{{ notification.heading }} {{ notification.message }}</span>
+    }
+  }
+</div>
+<div role="alert" aria-live="assertive" aria-atomic="true">
+  @if (notifications.current(); as notification) {
+    @if (notification.status === 'error') {
+      <span class="announcement">{{ notification.heading }} {{ notification.message }}</span>
+    }
+  }
+</div>
+@for (notification of notifications.current() ? [notifications.current()!] : []; track notification.id) {
+  <section class="notification" [attr.data-status]="notification.status"
+    [style.--notification-duration]="notification.duration + 'ms'" aria-label="Notification">
+    <app-icon class="notification__icon" [name]="notification.status" size="xl" />
+    <div class="notification__content">
+      @if (notification.heading) {
+        <p class="notification__heading">{{ notification.heading }}</p>
+      }
+      <p>{{ notification.message }}</p>
+    </div>
+    <button type="button" class="notification__close" aria-label="Dismiss notification"
+      (click)="notifications.hide(notification.id)"><span aria-hidden="true">×</span></button>
+    @if (notification.status !== 'loader') {
+      <div class="notification__progress" aria-hidden="true"></div>
+    }
+  </section>
+}
