@@ -50,7 +50,11 @@ describe('Application route protection and logout', () => {
     await harness.navigateByUrl('/app/products');
     const sidebar = harness.routeNativeElement!.querySelector('app-sidebar')!;
     expect(sidebar.querySelector('nav')!.getAttribute('aria-label')).toBe('Main navigation');
-    expect(sidebar.querySelector('.app-sidebar__logo')!.getAttribute('aria-hidden')).toBe('true');
+    const logo = sidebar.querySelector('.app-sidebar__logo')!;
+    expect(logo.getAttribute('aria-hidden')).toBeNull();
+    const logoImage = logo.querySelector('img')!;
+    expect(logoImage.getAttribute('src')).toBe('images/brand.png');
+    expect(logoImage.getAttribute('alt')).toBe('Brand logo');
     const links = sidebar.querySelectorAll<HTMLAnchorElement>('a');
     expect(links[0].getAttribute('href')).toBe('/app/products');
     expect(links[1].getAttribute('href')).toBe('/app/profile');
