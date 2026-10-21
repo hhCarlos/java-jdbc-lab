@@ -30,6 +30,42 @@ describe('ProductsService', () => {
 
   afterEach(() => http.verify());
 
+  it.each(['1', '00042', '9007199254740993', '9223372036854775807'])
+    ('DELETEs lazily with exact ID %s, no body, and interceptor authentication', async id => {
+      const result = service.deleteById(id);
+      http.expectNone(() => true);
+      const promise = firstValueFrom(result);
+      const pending = http.expectOne(`${endpoint}/${id}`);
+      expect(pending.request.method).toBe('DELETE');
+      expect(pending.request.body).toBeNull();
+      expect(pending.request.params.keys()).toEqual([]);
+      expect(pending.request.headers.get('Authorization')).toBe('Bearer test-token');
+      pending.flush(null, { status: 204, statusText: 'No Content' });
+      expect(await promise).toBeNull();
+    });
+
+  it.each(['', '0', '000', '-1', '1.5', '1e2', 'abc', ' 1', '1 ', '1/2', '9223372036854775808'])
+    ('rejects invalid delete ID %j without HTTP', async id => {
+      await expect(firstValueFrom(service.deleteById(id))).rejects.toBeInstanceOf(RangeError);
+      http.expectNone(() => true);
+    });
+
+  it.each([0, 400, 401, 403, 404, 500])('preserves delete errors %s and authentication handling', async status => {
+    const result = firstValueFrom(service.deleteById('42')).catch((error: unknown) => error);
+    const pending = http.expectOne(`${endpoint}/42`);
+    const problem = { detail: 'Failure' };
+    const event = new ProgressEvent('error');
+    if (status === 0) pending.error(event);
+    else pending.flush(problem, { status, statusText: 'Error' });
+    const error = await result as HttpErrorResponse;
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    expect(error.status).toBe(status);
+    expect(error.error).toEqual(status === 0 ? event : problem);
+    expect(error.url).toBe(`${endpoint}/42`);
+    expect(TestBed.inject(SessionService).clear).not.toHaveBeenCalled();
+    expect(TestBed.inject(Router).navigate).not.toHaveBeenCalled();
+  });
+
   it.each([undefined, null, 'Details'])('PUTs only editable fields with exact ID and description %j', async description => {
     const input = { title: 'Book', price: 12.34, stock: 0, description, ownerUserId: 8, statusCode: 'ACTIVE' };
     const result = service.update('9007199254740993', input);

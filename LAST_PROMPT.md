@@ -1,37 +1,25 @@
-# Latest task prompt
-
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T18:29:48-06:00
+Recorded at: 2026-10-20T18:41:22-06:00
 
-## Task prompt
+Task prompt:
+Add soft-delete support to the existing frontend ProductsService.
 
-Expose product soft deletion through the application service and existing owner-products controller.
-
-Follow AGENTS.md and all applicable task prerequisites. Reuse the repository soft-delete operation already implemented.
-
-Endpoint:
-DELETE /users/me/products/{id}
+Follow AGENTS.md and all applicable task prerequisites. Limit application changes to front-end/.
 
 Requirements:
-- Require a valid bearer JWT.
-- Resolve the owner through the existing authenticated-user mechanism.
-- Never accept an owner user ID or target status from the client.
-- Keep the application service independent of HTTP and Spring Security types.
-- Validate the product ID using existing conventions.
-- Delegate to the owner-scoped repository operation within a transaction.
-- Check the affected-row result.
-- Return HTTP 204 with no response body when deletion succeeds.
-- Return the same HTTP 404 response for missing, already-deleted, or another user's products.
-- Preserve existing authentication behavior, including nonexistent authenticated accounts.
-- Allow soft deletion of ACTIVE and INACTIVE products.
-- Change publication status to DELETED while preserving the row and all other data.
-- Do not perform physical deletion or implement recovery.
+- Add a method such as deleteById(id).
+- Send DELETE /api/users/me/products/{id} through the existing proxy.
+- Use the existing product ID type and validation conventions.
+- Do not send a request body, owner ID, or status value.
+- Rely on the existing interceptor for bearer authentication.
+- Handle the backend's 204 No Content response using Observable<void>.
+- Return the Observable without subscribing inside the service.
+- Preserve HTTP errors for the caller and keep existing authentication handling unchanged.
+- Preserve all existing product service operations.
 
-Document the endpoint, bearer requirement, soft-delete semantics, and responses in OpenAPI. Update relevant business-rule documentation.
+Do not connect buttons, add confirmation dialogs, notifications, loaders, navigation, or backend changes.
 
-Preserve existing product operations and security configuration. Do not introduce roles, schema changes, or frontend integration.
+Add focused HTTP tests covering the DELETE method and URL, absence of a body, successful empty response, invalid IDs, and error propagation.
 
-Add focused service and HTTP/security tests for successful deletion, ownership isolation, missing/already-deleted products, invalid IDs, and missing/invalid/expired authentication. Verify deleted products are unavailable through existing listings and lookups.
-
-Run relevant tests and report results. Provide a sample authenticated DELETE request using the configured application port.
+Run relevant frontend tests and the Angular build. Report results and provide a minimal service usage example.

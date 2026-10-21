@@ -8,6 +8,14 @@ import { CreateProductRequest, OwnedProduct, ProductPagination, UpdateProductReq
 export class ProductsService {
   private readonly http = inject(HttpClient);
 
+  /** Soft-deletes an owned product; authentication and HTTP errors stay in the HTTP pipeline. */
+  deleteById(id: string): Observable<void> {
+    if (!/^[0-9]+$/.test(id) || BigInt(id) <= 0n || BigInt(id) > 9_223_372_036_854_775_807n) {
+      return throwError(() => new RangeError('Product ID must be a positive 64-bit integer.'));
+    }
+    return this.http.delete<void>(`/api/users/me/products/${encodeURIComponent(id)}`);
+  }
+
   /** Loads an owned product; authentication and HTTP errors remain with the HTTP pipeline. */
   getById(id: string): Observable<OwnedProduct> {
     return this.http.get<OwnedProduct>(`/api/users/me/products/${encodeURIComponent(id)}`);
