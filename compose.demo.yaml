@@ -1,0 +1,57 @@
+name: jl-store-demo
+
+services:
+  oracle:
+    build:
+      context: .
+      dockerfile: infra/demo/oracle.Dockerfile
+    platform: linux/arm64
+    environment:
+      ORACLE_PASSWORD: ${DEMO_ORACLE_PASSWORD:?Set DEMO_ORACLE_PASSWORD in .env.demo}
+      DEMO_DB_PASSWORD: ${DEMO_DB_PASSWORD:?Set DEMO_DB_PASSWORD in .env.demo}
+    shm_size: 1gb
+    tmpfs:
+      - /opt/oracle/oradata:rw,size=8g,mode=1777
+    healthcheck:
+      test: ["CMD", "bash", "/opt/demo/ready.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 90
+      start_period: 60s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      PROD_DB_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      PROD_DB_USERNAME: store_jdbc
+      PROD_DB_PASSWORD: ${DEMO_DB_PASSWORD:?Set DEMO_DB_PASSWORD in .env.demo}
+      PROD_JWT_SECRET: ${DEMO_JWT_SECRET:?Set DEMO_JWT_SECRET in .env.demo}
+      PROD_JWT_ISSUER: jl-store-demo
+      DEV_DB_RESET: "false"
+      SPRING_SQL_INIT_MODE: never
+    depends_on:
+      oracle:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "8", "http://localhost:8080/catalog/products?pageSize=1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./front-end
+    ports:
+      - "127.0.0.1:8081:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --max-time 4 http://127.0.0.1/ > /dev/null && curl --fail --silent --max-time 4 http://127.0.0.1/api/catalog/products?pageSize=1 > /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 12

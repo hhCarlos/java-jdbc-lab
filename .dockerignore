@@ -1,0 +1,13 @@
+**
+!Dockerfile
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+!infra/
+!infra/database/
+!infra/database/setup.sql
+!infra/database/tables/
+!infra/database/tables/*.sql
+!infra/demo/
+!infra/demo/**

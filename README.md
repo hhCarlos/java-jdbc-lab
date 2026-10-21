@@ -1,5 +1,10 @@
 # Java JDBC Lab
 
+For the isolated full-stack demo at `http://127.0.0.1:8081`, see
+[disposable demo setup](docs/demo.md). Start it with `./scripts/demo-up.sh` after
+configuring `.env.demo`. Every invocation discards previous demo data; the existing
+local Oracle environment is preserved.
+
 Minimal Java 17 / Spring Boot 4.1.0 / Maven foundation for Oracle JDBC development.
 Includes two user read endpoints backed by JdbcTemplate and the existing Oracle USERS
 table. Authentication is available at `POST /auth/login` and `POST /auth/register`; user reads require Bearer JWT authentication. Schema changes at startup are disabled unless

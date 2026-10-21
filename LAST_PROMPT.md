@@ -1,38 +1,66 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T19:43:58-06:00
+Recorded at: 2026-10-20T20:36:28.504900-06:00
 
 Task prompt:
 
-Add a Save as draft action to ProductForm in create mode only.
+Implement a reproducible, disposable full-stack demo started with:
 
-Follow AGENTS.md and all applicable task prerequisites. Limit application changes to front-end/.
+./scripts/demo-up.sh
 
-Button:
-- Reuse AppButton with label="Save as draft", variant="ghost", status="warning", and type="button".
-- Place it alongside the existing creation actions.
-- Keep it visible but disabled unless the form is valid, stock is a valid positive integer, validation is complete, and no write request is pending.
-- Hide it in edit mode.
-- Enforce the same conditions in its handler, not only through the disabled button.
+Follow AGENTS.md and all applicable task prerequisites and database rules.
 
-Submission:
-- Reuse the existing creation flow and ProductsService.create().
-- Send active=false explicitly to save the product as INACTIVE.
-- Preserve entered values and existing numeric validation.
-- Reuse the blocking loader, duplicate-submit prevention, subscription cleanup, and finalize handling.
-- Prevent simultaneous submissions through the normal creation and draft buttons.
+Inspect the existing initialization scripts, Spring profiles, Maven packaging, Angular build configuration, and Oracle image behavior before implementing.
 
-Success:
-- Show the existing success notification: "Product saved as draft."
-- Mark the form pristine and navigate to Products with fresh-list retrieval.
+Demo contract:
+- Every invocation starts a fresh demo database.
+- Initialize the application schema and the three canonical product statuses only.
+- USERS and PRODUCTS must start empty.
+- Do not run development fixture resets, verification inserts, or automated test suites during startup.
+- Preserve the existing local Compose environment and its oracle-data volume.
 
-Failure:
-- Preserve form values and stay on the form.
-- Show an error notification: "Unable to save the product as a draft. Please try again."
-- Preserve authentication-expiry handling.
+Compose:
+- Create a standalone compose.demo.yaml, without merging the existing Compose file.
+- Use the explicit project name jl-store-demo.
+- Include oracle, backend, and frontend services.
+- Use gvenzl/oracle-free:23.26.3-slim with architecture compatible with the target Mac M4.
+- Store Oracle data on explicit tmpfs storage at /opt/oracle/oradata. Do not use persistent or anonymous database volumes.
+- Do not publish Oracle or backend ports to the host.
+- Publish the frontend on 127.0.0.1:8081.
 
-Keep normal creation, editing, deletion, and Cancel confirmation unchanged. Normal creation with zero stock remains allowed under existing rules.
+Initialization:
+- Automatically provision STORE_JDBC in FREEPDB1.
+- Reuse canonical database SQL, preserving the documented schema.
+- Run DDL under the correct application schema and seed only the status lookup.
+- Establish one initialization owner.
+- Ensure Oracle readiness requires successful application-schema initialization, not merely a running database.
+- Fail clearly if initialization fails.
 
-Test button eligibility, explicit active=false, handler safeguards, duplicate prevention, success/error behavior, and edit-mode exclusion.
+Backend:
+- Add a multi-stage Dockerfile using Java 17 and the project's Maven build.
+- Run with the existing prod profile and demo-specific environment configuration.
+- Connect to oracle:1521/FREEPDB1.
+- Preserve disabled Spring SQL initialization and exclude the destructive dev reset.
+- Wait for schema readiness and provide a meaningful backend readiness check.
 
-Run relevant frontend tests and the Angular build. Report results and changed files.
+Frontend:
+- Build the existing Angular application using Node 24 and npm ci.
+- Serve compiled files with Nginx.
+- Proxy /api/ to backend:8080, stripping /api.
+- Support Angular deep links through the index.html fallback.
+- Keep secrets out of frontend assets and image layers.
+
+Configuration and script:
+- Add suitable .dockerignore files.
+- Provide .env.demo.example with placeholders and ignore .env.demo.
+- Validate required configuration without printing secrets.
+- demo-up.sh must resolve paths independently of the caller's directory.
+- Recreate only the explicitly named demo project, build/start services, wait for readiness with bounded timeouts, and return nonzero on failure.
+- Never remove unrelated containers or volumes, prune Docker, or modify the existing local database.
+- Print the demo URL and useful scoped diagnostic commands.
+
+Document prerequisites, environment setup, startup, shutdown, and the disposable-data behavior. Do not implement demo-test.sh, sample business data, third-party integrations, or reports.
+
+Validate Compose configuration and, if Docker is available, build and start the demo. Verify schema readiness, exactly three canonical statuses, empty application tables, frontend routing, and API forwarding. Verify restart initialization without leaving sample rows.
+
+If runtime verification is blocked, report the exact blocker and do not claim success. Report changed files and checks according to repository workflow rules.
