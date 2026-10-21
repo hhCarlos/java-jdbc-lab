@@ -22,9 +22,10 @@ export class ProductsService {
   }
 
   /** Creates a product; the backend validates values and assigns ownership and status. */
-  create({ title, price, description, stock }: CreateProductRequest): Observable<OwnedProduct> {
+  create({ title, price, description, stock, active }: CreateProductRequest): Observable<OwnedProduct> {
     const body: CreateProductRequest = { title, price, stock };
     if (description !== undefined) body.description = description;
+    if (active !== undefined) body.active = active;
     return this.http.post<OwnedProduct>('/api/users/me/products', body);
   }
 

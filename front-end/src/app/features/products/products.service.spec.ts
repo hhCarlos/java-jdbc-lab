@@ -148,12 +148,29 @@ describe('ProductsService', () => {
     expect(pending.request.params.keys()).toEqual([]);
     expect(pending.request.headers.get('Authorization')).toBe('Bearer test-token');
     expect(pending.request.body).toEqual({
-      title: 'Book', price: 9999999999.99, stock: 9999999999, description: 'Details',
+      title: 'Book', price: 9999999999.99, stock: 9999999999, description: 'Details', active: false,
     });
     const response: OwnedProduct = {
       id: 42, title: 'Book', price: input.price, stock: input.stock,
       description: 'Details', statusCode: 'ACTIVE',
     };
+    pending.flush(response, { status: 201, statusText: 'Created' });
+    expect(await promise).toEqual(response);
+  });
+
+  it.each([false, true, undefined])('POST preserves explicit active=%j and omits an unspecified publication choice', async active => {
+    const input = { title: 'Book', price: 12.34, stock: 5,
+      ...(active === undefined ? {} : { active }),
+      status_id: 3, statusCode: 'DELETED', ownerUserId: 999 };
+    const promise = firstValueFrom(service.create(input));
+    const pending = http.expectOne(endpoint);
+    expect(pending.request.method).toBe('POST');
+    expect(pending.request.body).toEqual({ title: 'Book', price: 12.34, stock: 5,
+      ...(active === undefined ? {} : { active }) });
+    expect(Object.hasOwn(pending.request.body, 'active')).toBe(active !== undefined);
+    // The backend response remains authoritative, even if it differs from the request's intent.
+    const response: OwnedProduct = { id: 42, title: 'Book', price: 12.34, stock: 5,
+      description: null, statusCode: 'INACTIVE' };
     pending.flush(response, { status: 201, statusText: 'Created' });
     expect(await promise).toEqual(response);
   });

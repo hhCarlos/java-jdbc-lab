@@ -1,37 +1,23 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T19:29:42-06:00
+Recorded at: 2026-10-20T19:39:40-06:00
 
 Task prompt:
 
-Extend backend product creation to support saving a product as inactive.
+Align the frontend product-creation request with the backend's new active property.
 
-Follow AGENTS.md and all applicable database rules.
+Follow AGENTS.md and all applicable task prerequisites. Limit application changes to front-end/.
 
-Endpoint:
-POST /users/me/products
+Requirements:
+- Add active?: boolean to the existing creation-request model.
+- Ensure ProductsService.create() forwards an explicitly supplied active value.
+- Preserve active=false; do not drop it through truthiness checks or replace it with a default.
+- When active is omitted, preserve the existing payload behavior and let the backend apply its default rules.
+- Keep response types aligned with the existing authoritative product status.
+- Do not send raw status IDs or status codes.
 
-Add an optional Boolean active field to the creation request.
+Keep existing form behavior unchanged. Do not add controls, buttons, publication decisions, backend changes, or modify the update operation.
 
-Business rules:
-- active=false creates an INACTIVE product, regardless of positive stock.
-- active=true creates ACTIVE only when stock is greater than zero.
-- Zero stock always creates INACTIVE.
-- When active is omitted or null, preserve existing behavior: positive stock creates ACTIVE; zero stock creates INACTIVE.
-- Use existing status codes ACTIVE and INACTIVE. Do not introduce a DRAFT status.
-- Never allow creation as DELETED.
+Add focused HTTP tests verifying creation payloads with active=false, active=true, and active omitted. Preserve existing creation tests.
 
-Implementation:
-- Extend request binding and application/domain logic.
-- Preserve existing field validation and authenticated ownership resolution.
-- Do not accept owner IDs, raw status IDs, or status codes from the client.
-- Reuse the repository's existing status-code insertion capability.
-- Update affected service signatures and TransactionalProductService overrides so transaction handling remains effective.
-- Return the authoritative resulting status through the existing response structure.
-- Preserve PUT behavior and all other product operations.
-- Update OpenAPI and relevant business-rule documentation.
-- Do not change the database schema or front-end/.
-
-Test explicit active=false with positive stock, active=true with positive stock, zero-stock precedence, omitted/null compatibility, and existing ownership and validation behavior.
-
-Run relevant backend tests. Report results and provide example payloads for normal publication and saving as inactive.
+Run relevant frontend tests and the Angular build. Report results and list changed files according to the workflow rules.

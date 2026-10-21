@@ -19,10 +19,12 @@ export interface CreateProductRequest {
   description?: string | null;
   /** JSON integer from 0 through 9_999_999_999. */
   stock: number;
+  /** Optional publication choice; omitted uses the backend's stock-based default. */
+  active?: boolean;
 }
 
 /** Replacement fields; omitted or null description clears the existing description. */
-export interface UpdateProductRequest extends CreateProductRequest {
+export interface UpdateProductRequest extends Omit<CreateProductRequest, 'active'> {
   /** Publication choice; zero stock always forces INACTIVE. Omitted/null preserves status with positive stock. */
   active?: boolean | null;
 }
