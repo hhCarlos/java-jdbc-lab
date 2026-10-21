@@ -30,7 +30,9 @@ There is no updated_at trigger. Future application updates must set that timesta
 The manual command above remains non-destructive for an existing table. The separate
 `dev` runtime reset (`DEV_DB_RESET=true`) deliberately drops PRODUCTS before USERS and rebuilds USERS before PRODUCTS
 in the verified local STORE_JDBC / FREEPDB1 connection and inserts deterministic
-read-development fixtures. See the root README for profile commands and safeguards.
+read-development fixtures. See the
+[architecture guide](../../docs/architecture/README.md#database-initialization-and-storage)
+for reset safeguards and [profile commands](../../docs/architecture/README.md#profiles-and-ide-operation).
 Production never runs this reset.
 
 For an existing table, metadata checks report discrepancies and fail instead of
