@@ -89,7 +89,7 @@ class ProductCreationTransactionTest {
                         return 1;
                     });
             assertThatThrownBy(() -> context.getBean(ProductService.class)
-                    .update(8L, 7L, "New", BigDecimal.ONE, null, 0))
+                    .update(8L, 7L, "New", BigDecimal.ONE, null, 0, true))
                     .isInstanceOf(IllegalStateException.class).hasMessage("Readback failed");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM update_effect", Long.class)).isZero();
         }

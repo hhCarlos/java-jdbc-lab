@@ -121,7 +121,7 @@ class ProductServiceTest {
                 var saved = new OwnedProduct(8L, "New", BigDecimal.TEN, null, stock, target);
                 when(repository.findByIdAndOwnerId(8L, 7L)).thenReturn(Optional.of(current), Optional.of(saved));
                 when(repository.update(8L, 7L, "New", BigDecimal.TEN, null, stock, target)).thenReturn(1);
-                assertThat(service.update(8L, 7L, "New", BigDecimal.TEN, null, stock)).isSameAs(saved);
+                assertThat(service.update(8L, 7L, "New", BigDecimal.TEN, null, stock, null)).isSameAs(saved);
                 var order = inOrder(repository);
                 order.verify(repository).findByIdAndOwnerId(8L, 7L);
                 order.verify(repository).update(8L, 7L, "New", BigDecimal.TEN, null, stock, target);
@@ -132,17 +132,38 @@ class ProductServiceTest {
     }
 
     @Test
+    void explicitPublicationUsesExistingStatusUpdateAndReturnsAuthoritativeReadback() {
+        for (String initial : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (long stock : new long[]{0, 5}) {
+                for (Boolean active : new Boolean[]{true, false, null}) {
+                    reset(repository);
+                    String target = stock == 0 ? "INACTIVE"
+                            : active == null ? initial : active ? "ACTIVE" : "INACTIVE";
+                    var current = new OwnedProduct(8L, "Old", BigDecimal.ONE, null, 3, initial);
+                    var saved = new OwnedProduct(8L, "New", BigDecimal.TEN, null, stock, target);
+                    when(repository.findByIdAndOwnerId(8L, 7L)).thenReturn(Optional.of(current), Optional.of(saved));
+                    when(repository.update(8L, 7L, "New", BigDecimal.TEN, null, stock, target)).thenReturn(1);
+                    assertThat(service.update(8L, 7L, "New", BigDecimal.TEN, null, stock, active)).isSameAs(saved);
+                    verify(repository).update(8L, 7L, "New", BigDecimal.TEN, null, stock, target);
+                    verify(repository, times(2)).findByIdAndOwnerId(8L, 7L);
+                    verifyNoMoreInteractions(repository);
+                }
+            }
+        }
+    }
+
+    @Test
     void updateRejectsMissingDeletedAndZeroAffectedRows() {
-        assertThatThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, 1))
+        assertThatThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, 1, null))
                 .isInstanceOf(ProductNotFoundException.class);
         when(repository.findByIdAndOwnerId(8L, 7L)).thenReturn(Optional.of(
                 new OwnedProduct(8L, "Old", BigDecimal.ONE, null, 1, "DELETED")));
-        assertThatThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, 1))
+        assertThatThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, 1, null))
                 .isInstanceOf(ProductNotFoundException.class);
         verify(repository, never()).update(any(), any(), any(), any(), any(), anyLong(), any());
         when(repository.findByIdAndOwnerId(8L, 7L)).thenReturn(Optional.of(
                 new OwnedProduct(8L, "Old", BigDecimal.ONE, null, 1, "ACTIVE")));
-        assertThatThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, 1))
+        assertThatThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, 1, null))
                 .isInstanceOf(ProductNotFoundException.class);
         verify(repository, times(3)).findByIdAndOwnerId(8L, 7L);
     }
@@ -150,18 +171,18 @@ class ProductServiceTest {
     @Test
     void updateValidatesBeforePersistence() {
         for (BigDecimal price : new BigDecimal[]{null, new BigDecimal("-1"), new BigDecimal("0.001"), new BigDecimal("10000000000")}) {
-            assertThatIllegalArgumentException().isThrownBy(() -> service.update(8L, 7L, "New", price, null, 1));
+            assertThatIllegalArgumentException().isThrownBy(() -> service.update(8L, 7L, "New", price, null, 1, null));
         }
         for (String title : new String[]{null, " ", "x".repeat(51)}) {
-            assertThatIllegalArgumentException().isThrownBy(() -> service.update(8L, 7L, title, BigDecimal.ONE, null, 1));
+            assertThatIllegalArgumentException().isThrownBy(() -> service.update(8L, 7L, title, BigDecimal.ONE, null, 1, null));
         }
         for (long stock : new long[]{-1, 10000000000L}) {
-            assertThatIllegalArgumentException().isThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, stock));
+            assertThatIllegalArgumentException().isThrownBy(() -> service.update(8L, 7L, "New", BigDecimal.ONE, null, stock, null));
         }
         for (Long id : new Long[]{null, 0L, -1L}) {
-            assertThatIllegalArgumentException().isThrownBy(() -> service.update(id, 7L, "New", BigDecimal.ONE, null, 1));
+            assertThatIllegalArgumentException().isThrownBy(() -> service.update(id, 7L, "New", BigDecimal.ONE, null, 1, null));
         }
-        assertThatNullPointerException().isThrownBy(() -> service.update(8L, null, "New", BigDecimal.ONE, null, 1));
+        assertThatNullPointerException().isThrownBy(() -> service.update(8L, null, "New", BigDecimal.ONE, null, 1, null));
         verifyNoInteractions(repository);
     }
 }

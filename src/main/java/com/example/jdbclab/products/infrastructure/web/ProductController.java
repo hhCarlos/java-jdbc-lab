@@ -118,7 +118,7 @@ public class ProductController {
                 request.price(), request.description(), request.stock().longValueExact()));
     }
 
-    @Operation(summary = "Replace my product fields", description = "Replaces title, price, description and stock. Omitted or null description clears it. Owner is resolved from the bearer token; client ownership and status fields are ignored. ACTIVE becomes INACTIVE at zero stock; INACTIVE remains INACTIVE when restocked. Deleted products cannot be updated.")
+    @Operation(summary = "Replace my product fields", description = "Replaces title, price, description and stock. Omitted or null description clears it. Owner is resolved from the bearer token; client ownership and status fields are ignored. Optional active=true publishes and active=false suspends with positive stock. Zero stock always forces INACTIVE regardless of active. Omitted or null active preserves the current publication status with positive stock, so restocking alone never reactivates INACTIVE. Deleted products cannot be updated.")
     @ApiResponse(responseCode = "200", description = "Product updated",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = OwnedProduct.class)))
     @ApiResponse(responseCode = "400", description = "Invalid product ID, JSON, or product input",
@@ -136,7 +136,7 @@ public class ProductController {
             @Valid @RequestBody UpdateProductRequest request) {
         var currentUser = users.findCurrentUser(principal.getSubject());
         return products.update(id, currentUser.id(), request.title(), request.price(),
-                request.description(), request.stock().longValueExact());
+                request.description(), request.stock().longValueExact(), request.active());
     }
 
 }

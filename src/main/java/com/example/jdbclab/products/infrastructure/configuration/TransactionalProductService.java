@@ -26,7 +26,7 @@ public class TransactionalProductService extends ProductService {
     @Override
     @Transactional
     public OwnedProduct update(Long productId, Long ownerUserId, String title, BigDecimal price,
-                               String description, long stock) {
-        return super.update(productId, ownerUserId, title, price, description, stock);
+                               String description, long stock, Boolean active) {
+        return super.update(productId, ownerUserId, title, price, description, stock, active);
     }
 }

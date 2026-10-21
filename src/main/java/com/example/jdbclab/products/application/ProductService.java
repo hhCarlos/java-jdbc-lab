@@ -51,13 +51,14 @@ public class ProductService {
     }
 
     public OwnedProduct update(Long productId, Long ownerUserId, String title, BigDecimal price,
-                               String description, long stock) {
+                               String description, long stock, Boolean active) {
         validateFields(title, price, stock);
         var current = findByIdAndOwnerId(productId, ownerUserId);
         if (!"ACTIVE".equals(current.statusCode()) && !"INACTIVE".equals(current.statusCode())) {
             throw new ProductNotFoundException(productId);
         }
-        String status = "ACTIVE".equals(current.statusCode()) && stock > 0 ? "ACTIVE" : "INACTIVE";
+        String status = stock == 0 ? "INACTIVE"
+                : active == null ? current.statusCode() : active ? "ACTIVE" : "INACTIVE";
         int affected = repository.update(productId, ownerUserId, title, price, description, stock, status);
         if (affected == 0) throw new ProductNotFoundException(productId);
         if (affected != 1) throw new IllegalStateException("Product update affected an unexpected number of rows.");

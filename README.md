@@ -737,8 +737,12 @@ description, and stock. Title, price, and stock are required; omitted or null
 description clears the existing value. Validation matches product creation:
 nonblank title up to 50 characters, non-negative NUMBER(12,2) price without
 rounding, and integer stock from 0 to 9999999999. ID and ownership are preserved;
-client owner/status fields are ignored. ACTIVE with zero stock becomes INACTIVE;
-positive stock preserves ACTIVE, and INACTIVE remains INACTIVE even when restocked.
+client owner/status fields are ignored. Optional Boolean `active` controls publication:
+with positive stock, `false` suspends (INACTIVE) and `true` publishes (ACTIVE).
+Zero stock always forces INACTIVE, even with `active: true`. Omitting `active` or
+sending `null` preserves the current publication status when stock is positive,
+maintaining compatibility with existing clients. Restocking alone never reactivates
+an INACTIVE product; explicit `active: true` with positive stock is required.
 Missing, deleted, and other owners' products return the same 404. No product is
 created or restored. Lookup, status selection, affected-row verification, and
 readback run in one transaction. Identical repeated replacements return 200 with

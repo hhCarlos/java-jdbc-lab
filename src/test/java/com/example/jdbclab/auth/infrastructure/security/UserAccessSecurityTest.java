@@ -413,6 +413,55 @@ class UserAccessSecurityTest {
     }
 
     @Test
+    void replacementHonorsPublicationChoiceAndStockPrecedence() throws Exception {
+        createProducts();
+        for (String initial : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (int stock : new int[]{0, 5}) {
+                for (String active : new String[]{"", ",\"active\":null", ",\"active\":true", ",\"active\":false"}) {
+                    product(1, "Old", initial, 3);
+                    Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+                    String target = stock == 0 || active.endsWith("false") ? "INACTIVE"
+                            : active.endsWith("true") ? "ACTIVE" : initial;
+                    String body = "{\"title\":\"Updated\",\"price\":2.50,\"stock\":" + stock + active
+                            + ",\"ownerUserId\":2,\"userId\":2,\"statusId\":3,\"statusCode\":\"DELETED\"}";
+                    mvc.perform(put("/users/me/products/" + id).contentType(MediaType.APPLICATION_JSON).content(body)
+                                    .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                            .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id))
+                            .andExpect(jsonPath("$.title").value("Updated"))
+                            .andExpect(jsonPath("$.stock").value(stock))
+                            .andExpect(jsonPath("$.statusCode").value(target));
+                    org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                            "SELECT s.code FROM products p JOIN product_statuses s ON s.id = p.status_id WHERE p.id = ?",
+                            String.class, id)).isEqualTo(target);
+                    org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                            "SELECT user_id FROM products WHERE id = ?", Long.class, id)).isEqualTo(1L);
+                }
+            }
+        }
+    }
+
+    @Test
+    void explicitPublicationCannotModifyAnotherOwnersProductOrRestoreDeletedProduct() throws Exception {
+        createProducts();
+        for (String initial : new String[]{"ACTIVE", "INACTIVE", "DELETED"}) {
+            product(initial.equals("DELETED") ? 1 : 2, "Protected", initial, 3);
+            Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+            for (boolean active : new boolean[]{true, false}) {
+                mvc.perform(put("/users/me/products/" + id).contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"title\":\"Changed\",\"price\":1,\"stock\":5,\"active\":" + active
+                                        + ",\"ownerUserId\":1,\"statusCode\":\"ACTIVE\",\"statusId\":1}")
+                                .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                        .andExpect(status().isNotFound());
+                org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                        "SELECT title FROM products WHERE id = ?", String.class, id)).isEqualTo("Protected");
+                org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                        "SELECT s.code FROM products p JOIN product_statuses s ON s.id = p.status_id WHERE p.id = ?",
+                        String.class, id)).isEqualTo(initial);
+            }
+        }
+    }
+
+    @Test
     void replacementHidesOtherOwnerDeletedAndMissingProductsWithIdentical404() throws Exception {
         createProducts();
         product(2, "Private", "ACTIVE", 5);
