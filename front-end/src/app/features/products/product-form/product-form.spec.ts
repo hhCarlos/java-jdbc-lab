@@ -199,7 +199,7 @@ describe('Product form', () => {
     expect(checkbox.getAttribute('aria-describedby')).toBe('product-suspended-description product-suspended-stock');
     expect(element.querySelector('#product-suspended-description')?.textContent)
       .toBe('Suspend this product to hide it from the public catalog.');
-    expect(element.querySelector('#product-suspended-stock')?.textContent).toContain('Zero-stock products remain inactive');
+    expect(element.querySelector('#product-suspended-stock')?.textContent).toBe('Add stock before reactivating this product.');
     expect(element.querySelector('.product-form__information-icon use')?.getAttribute('href'))
       .toBe('icons/sprite.svg#information');
   });
@@ -229,20 +229,96 @@ describe('Product form', () => {
     expect(form.pristine).toBe(true);
   });
 
-  it('keeps the backend zero-stock status authoritative after requesting publication', () => {
-    const { fixture, element, form, submit } = editSetup('42');
+  it.each(['ACTIVE', 'INACTIVE'])('forces zero-stock %s products checked and disabled without dirtying initialization', statusCode => {
+    const { fixture, element, form, input, submit, button } = editSetup('42');
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34, stock: 0, statusCode: 'INACTIVE' });
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34, stock: 0, statusCode });
     fixture.detectChanges();
-    element.querySelector<HTMLInputElement>('#product-suspended')!.click();
+    const checkbox = element.querySelector<HTMLInputElement>('#product-suspended')!;
+    expect(checkbox.checked).toBe(true);
+    expect(checkbox.disabled).toBe(true);
+    expect(form.controls['suspended'].disabled).toBe(true);
+    expect(form.value.suspended).toBeUndefined();
+    expect(form.getRawValue().suspended).toBe(true);
+    expect(form.pristine).toBe(true);
+    expect(form.untouched).toBe(true);
+    expect(button('Save changes').disabled).toBe(true);
+    checkbox.click();
+    expect(form.pristine).toBe(true);
+    input('title', 'Updated');
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     submit();
     const pending = http.expectOne('/api/users/me/products/42');
-    expect(pending.request.body.active).toBe(true);
-    expect(pending.request.body.stock).toBe(0);
+    expect(pending.request.body).toEqual({ title: 'Updated', price: 12.34, description: '', stock: 0, active: false });
     pending.flush({ ...product, price: 12.34, stock: 0, statusCode: 'INACTIVE' });
     expect(form.controls['suspended'].value).toBe(true);
     expect(form.pristine).toBe(true);
+  });
+
+  it('checks and disables immediately at zero and keeps suspension until explicit reactivation after restocking', () => {
+    const { fixture, element, form, input, submit } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
+    fixture.detectChanges();
+    const checkbox = element.querySelector<HTMLInputElement>('#product-suspended')!;
+    expect(checkbox.checked).toBe(false);
+    expect(checkbox.disabled).toBe(false);
+    input('stock', '0');
+    expect(form.controls['suspended'].value).toBe(true);
+    expect(form.controls['suspended'].disabled).toBe(true);
+    expect(form.controls['suspended'].pristine).toBe(true);
+    expect(form.dirty).toBe(true);
+    fixture.detectChanges();
+    expect(checkbox.checked).toBe(true);
+    expect(checkbox.disabled).toBe(true);
+    input('stock', '5'); fixture.detectChanges();
+    expect(checkbox.disabled).toBe(false);
+    expect(checkbox.checked).toBe(true);
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    submit();
+    let pending = http.expectOne('/api/users/me/products/42');
+    expect(pending.request.body.active).toBe(false);
+    expect(form.controls['suspended'].disabled).toBe(true);
+    pending.flush({ ...product, price: 12.34, stock: 5, statusCode: 'INACTIVE' });
+    fixture.detectChanges();
+    expect(checkbox.disabled).toBe(false);
+    checkbox.click(); fixture.detectChanges();
+    expect(form.dirty).toBe(true);
+    submit();
+    pending = http.expectOne('/api/users/me/products/42');
+    expect(pending.request.body).toEqual({ title: product.title, price: 12.34, description: '', stock: 5, active: true });
+    pending.flush({ ...product, price: 12.34, stock: 5, statusCode: 'ACTIVE' });
+    fixture.detectChanges();
+    expect(checkbox.checked).toBe(false);
+    expect(form.pristine).toBe(true);
+  });
+
+  it.each(['', '-1', '1.5', '10000000000', 'abc'])('disables suspension for invalid stock %j and preserves its value', stock => {
+    const { fixture, element, form, input } = editSetup('42');
+    TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
+    input('stock', stock); fixture.detectChanges();
+    const checkbox = element.querySelector<HTMLInputElement>('#product-suspended')!;
+    expect(checkbox.disabled).toBe(true);
+    expect(checkbox.checked).toBe(false);
+    expect(form.invalid).toBe(true);
+    input('stock', '1'); fixture.detectChanges();
+    expect(checkbox.disabled).toBe(false);
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('keeps suspension disabled if stock changes during an update and restores its state after failure', () => {
+    const { fixture, element, form, input, submit } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
+    input('title', 'Updated'); submit();
+    expect(form.controls['suspended'].disabled).toBe(true);
+    input('stock', '0'); input('stock', '5'); fixture.detectChanges();
+    expect(element.querySelector<HTMLInputElement>('#product-suspended')!.disabled).toBe(true);
+    http.expectOne('/api/users/me/products/42').flush({}, { status: 500, statusText: 'Failure' });
+    fixture.detectChanges();
+    expect(form.controls['suspended'].enabled).toBe(true);
+    expect(form.controls['suspended'].value).toBe(true);
+    expect(form.dirty).toBe(true);
   });
 
   it('hides publication controls and excludes them from POST even if set programmatically', () => {

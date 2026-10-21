@@ -1,41 +1,31 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T19:09:11-06:00
+Recorded at: 2026-10-20T19:15:14-06:00
 
 Task prompt:
 
-Add a publication-control field to the existing ProductForm edit flow.
+Fix the Suspend Product control in the frontend product-edit form.
 
-Follow AGENTS.md and all applicable task prerequisites. Limit application changes to front-end/.
+Follow AGENTS.md and all applicable task prerequisites.
 
-UI:
-- Show the field only in edit mode after product loading succeeds.
-- Make it span the full available form width, including across grid columns.
-- Use a contrasting information panel with a subtle blue background and border.
-- Include a native checkbox, an information AppIcon, and these English texts:
-  - Title: "Suspend Product"
-  - Subtitle: "Suspend this product to hide it from the public catalog."
-- Associate the checkbox accessibly with its label and description.
-- Use BEM, existing spacing tokens, and responsive styling.
+Behavior:
+- When stock is zero, show Suspend Product checked and disabled.
+- Explain: "Add stock before reactivating this product."
+- When stock becomes a valid positive integer, enable the checkbox, provided no request is pending.
+- Do not automatically uncheck it when stock increases; reactivation requires an explicit user choice.
+- Keep it disabled while stock is empty or invalid.
+- If stock changes from positive to zero, check and disable suspension immediately.
 
-Information styling:
-- Reuse existing information-status tokens and icon if available.
-- Otherwise, add an information icon to the existing sprite/registry and semantic information tokens.
-- Use hsl(212 60% 48%) as the base blue direction, adjusting theme-specific colors for contrast.
-- Keep text readable using normal theme text colors; color the icon with the information token.
-- Preserve AppIcon's inherited-color behavior.
+Implementation:
+- Manage disabled state through the existing reactive form control.
+- Preserve the suspension value when building the PUT payload; disabled controls are omitted from form.value, so use an appropriate approach such as getRawValue().
+- With zero stock, send active=false.
+- Initial loading and derived control-state updates must not make an untouched form dirty.
+- Avoid recursive value-change subscriptions.
+- Preserve existing submission, loading, notifications, and cancellation behavior.
 
-Form and API:
-- Add a boolean suspended control.
-- Initialize it from the loaded product status: INACTIVE means checked; ACTIVE means unchecked.
-- Initial population must leave the form pristine.
-- Map suspended to active: !suspended in the PUT request.
-- Extend the typed update request accordingly, without adding this field to POST creation.
-- Toggling the checkbox must participate in dirty tracking, submission eligibility, and Cancel confirmation.
-- Preserve validation, loader behavior, notifications, and create/update/delete flows.
-- Explain that zero-stock products remain inactive even when suspension is unchecked.
-- Use the backend response as the authoritative resulting status.
+Do not modify the backend or create flow.
 
-Do not add backend changes, dependencies, or another shared form-control component.
+Test initial zero stock, positive-to-zero changes, re-enabling after restocking, explicit reactivation, pristine initialization, and the submitted payload.
 
-Test initialization, checkbox-to-payload mapping, dirty tracking, and create-mode isolation. Run relevant frontend tests and the Angular build, then report results.
+Run relevant frontend tests and the Angular build. Report results.

@@ -70,6 +70,10 @@ export class ProductForm {
   };
 
   constructor() {
+    this.form.controls.stock.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => this.syncSuspensionState());
+
     combineLatest([this.route.data, this.route.paramMap, this.reload]).pipe(
       switchMap(([data, params]) => {
         this.deleteConfirmationOpen.set(false);
@@ -115,11 +119,27 @@ export class ProductForm {
               || status === 429 || status >= 500);
             return EMPTY;
           }),
-          finalize(() => this.loading.set(false)),
+          finalize(() => {
+            this.loading.set(false);
+            this.syncSuspensionState();
+          }),
         );
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe();
+  }
+
+  private syncSuspensionState(): void {
+    if (this.mode() !== 'edit') return;
+    const { stock, suspended } = this.form.controls;
+    const validStock = stock.enabled && stock.valid;
+    const quantity = Number(stock.value);
+    if (validStock && quantity === 0) suspended.setValue(true, { emitEvent: false });
+    const disabled = !this.productLoaded() || this.loading() || this.submitting()
+      || !validStock || quantity <= 0;
+    // Suppress derived events so updating control state cannot recurse or dirty the form.
+    if (disabled && suspended.enabled) suspended.disable({ emitEvent: false });
+    else if (!disabled && suspended.disabled) suspended.enable({ emitEvent: false });
   }
 
   protected retry(): void {
@@ -144,11 +164,13 @@ export class ProductForm {
     const id = this.productId()!;
     this.deleteConfirmationOpen.set(false);
     this.submitting.set(true);
+    this.syncSuspensionState();
     const releaseLoader = this.loader.show();
     defer(() => this.service.deleteById(id)).pipe(
       finalize(() => {
         releaseLoader();
         this.submitting.set(false);
+        this.syncSuspensionState();
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
@@ -190,11 +212,13 @@ export class ProductForm {
       stock: Number(values.stock),
     };
     this.submitting.set(true);
+    this.syncSuspensionState();
     const releaseLoader = this.loader.show();
-    defer(() => editing ? this.service.update(id!, { ...request, active: !values.suspended }) : this.service.create(request)).pipe(
+    defer(() => editing ? this.service.update(id!, { ...request, active: request.stock > 0 && !values.suspended }) : this.service.create(request)).pipe(
       finalize(() => {
         releaseLoader();
         this.submitting.set(false);
+        this.syncSuspensionState();
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
