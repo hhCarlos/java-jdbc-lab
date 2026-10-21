@@ -15,6 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JdbcProductRepository implements ProductRepository {
     private static final String DELETED = "DELETED";
+    private static final String SOFT_DELETE = """
+            UPDATE products
+            SET status_id = (SELECT id FROM product_statuses WHERE code = ?)
+            WHERE id = ? AND user_id = ?
+              AND status_id IN (SELECT id FROM product_statuses WHERE code IN (?, ?))
+            """;
     private static final String UPDATE = """
             UPDATE products
             SET title = ?, price = ?, description = ?, stock = ?,
@@ -43,6 +49,13 @@ public class JdbcProductRepository implements ProductRepository {
 
     public JdbcProductRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+    @Override
+    public int softDeleteByIdAndOwnerId(Long productId, Long ownerUserId) {
+        Objects.requireNonNull(productId, "Product ID is required.");
+        Objects.requireNonNull(ownerUserId, "Owner user ID is required.");
+        return jdbc.update(SOFT_DELETE, DELETED, productId, ownerUserId, "ACTIVE", "INACTIVE");
     }
 
     @Override

@@ -44,6 +44,92 @@ class JdbcProductRepositoryTest {
     }
 
     @Test
+    void softDeletesActiveAndInactiveUsingStatusCodesAndPreservesEveryOtherField() {
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 11, "ACTIVE");
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 22, "INACTIVE");
+        jdbc.update("UPDATE product_statuses SET id = ? WHERE code = ?", 33, "DELETED");
+        for (String status : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (long stock : new long[]{0, 9999999999L}) {
+                String description = stock == 0 ? null : "CLOB with ' and ? ".repeat(1000);
+                long id = insert(1, status, stock, description);
+                assertThat(repository.softDeleteByIdAndOwnerId(id, 1L)).isEqualTo(1);
+                var stored = jdbc.queryForObject("""
+                        SELECT id, title, price, description, stock FROM products WHERE id = ?
+                        """, (row, number) -> new OwnedProduct(row.getLong("id"), row.getString("title"),
+                        row.getBigDecimal("price"), row.getString("description"), row.getLong("stock"),
+                        "DELETED"), id);
+                assertThat(stored).isEqualTo(new OwnedProduct(id, "Owner's product",
+                        new BigDecimal("9999999999.99"), description, stock, "DELETED"));
+                assertThat(jdbc.queryForObject("SELECT user_id FROM products WHERE id = ?", Long.class, id))
+                        .isEqualTo(1L);
+                assertThat(jdbc.queryForObject("SELECT status_id FROM products WHERE id = ?", Long.class, id))
+                        .isEqualTo(33L);
+            }
+        }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isEqualTo(4L);
+    }
+
+    @Test
+    void softDeleteDoesNotMatchAnotherOwnerMissingOrAlreadyDeletedProducts() {
+        long other = insert(2, "ACTIVE", 3, "Other owner's data");
+        long deleted = insert(1, "DELETED", 8, "Keep deleted data");
+        var before = repository.findByIdAndOwnerId(other, 2L);
+        assertThat(repository.softDeleteByIdAndOwnerId(other, 1L)).isZero();
+        assertThat(repository.findByIdAndOwnerId(other, 2L)).isEqualTo(before);
+        assertThat(repository.softDeleteByIdAndOwnerId(Long.MAX_VALUE, 1L)).isZero();
+        assertThat(repository.softDeleteByIdAndOwnerId(deleted, 1L)).isZero();
+        assertThat(jdbc.queryForObject("SELECT description FROM products WHERE id = ?", String.class, deleted))
+                .isEqualTo("Keep deleted data");
+        assertThat(repository.softDeleteByIdAndOwnerId(other, 2L)).isEqualTo(1);
+        assertThat(repository.softDeleteByIdAndOwnerId(other, 2L)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class)).isEqualTo(2L);
+    }
+
+    @Test
+    void softDeletedProductsDisappearFromExistingOwnerAndPublicLookupsAndLists() {
+        var catalog = new com.example.jdbclab.catalog.infrastructure.persistence.JdbcCatalogRepository(jdbc);
+        long active = insert(1, "ACTIVE", 5, null);
+        long inactive = insert(1, "INACTIVE", 5, null);
+        long retained = insert(1, "ACTIVE", 5, null);
+        assertThat(catalog.findById(active)).isPresent();
+        assertThat(catalog.findAll(0, 100)).extracting(product -> product.id()).containsExactly(active, retained);
+        for (long id : new long[]{active, inactive}) {
+            assertThat(repository.findByIdAndOwnerId(id, 1L)).isPresent();
+            assertThat(repository.softDeleteByIdAndOwnerId(id, 1L)).isEqualTo(1);
+            assertThat(repository.findByIdAndOwnerId(id, 1L)).isEmpty();
+            assertThat(catalog.findById(id)).isEmpty();
+        }
+        assertThat(repository.findByOwnerId(1L, 0, 100)).extracting(OwnedProduct::id).containsExactly(retained);
+        assertThat(catalog.findAll(0, 100)).extracting(product -> product.id()).containsExactly(retained);
+    }
+
+    @Test
+    void softDeleteBindsStatusProductOwnerAndAllowedStatusesInExactlyOneUpdate() {
+        var deleteJdbc = mock(JdbcTemplate.class);
+        var deleteRepository = new JdbcProductRepository(deleteJdbc);
+        when(deleteJdbc.update(anyString(), eq("DELETED"), eq(17L), eq(2L), eq("ACTIVE"), eq("INACTIVE")))
+                .thenReturn(1);
+        assertThat(deleteRepository.softDeleteByIdAndOwnerId(17L, 2L)).isEqualTo(1);
+        var sql = ArgumentCaptor.forClass(String.class);
+        verify(deleteJdbc).update(sql.capture(), eq("DELETED"), eq(17L), eq(2L), eq("ACTIVE"), eq("INACTIVE"));
+        assertThat(sql.getValue()).isEqualTo("""
+                UPDATE products
+                SET status_id = (SELECT id FROM product_statuses WHERE code = ?)
+                WHERE id = ? AND user_id = ?
+                  AND status_id IN (SELECT id FROM product_statuses WHERE code IN (?, ?))
+                """);
+        verifyNoMoreInteractions(deleteJdbc);
+    }
+
+    @Test
+    void softDeleteRejectsNullIdsBeforeQuerying() {
+        clearInvocations(jdbc);
+        assertThatNullPointerException().isThrownBy(() -> repository.softDeleteByIdAndOwnerId(null, 1L));
+        assertThatNullPointerException().isThrownBy(() -> repository.softDeleteByIdAndOwnerId(1L, null));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
     void findsOwnersProductAndMapsAllEditFields() {
         String description = "Description with ' quotes and ? placeholders ".repeat(200);
         long id = insert(1, "ACTIVE", 7, description);

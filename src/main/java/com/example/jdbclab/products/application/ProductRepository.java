@@ -6,6 +6,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ProductRepository {
+    /**
+     * Changes only the status of this owner's ACTIVE or INACTIVE product to DELETED.
+     * Returns 1 when updated, or 0 for a missing, deleted, or another owner's product.
+     */
+    int softDeleteByIdAndOwnerId(Long productId, Long ownerUserId);
+
     /** Finds this owner's non-deleted product, including inactive products and zero stock. */
     Optional<OwnedProduct> findByIdAndOwnerId(Long productId, Long ownerUserId);
 
