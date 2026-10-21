@@ -730,6 +730,19 @@ With the configured default port 8080:
 curl http://localhost:8080/users/me -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
+### Owner product creation
+
+`POST /users/me/products` resolves ownership from the authenticated user and accepts
+an optional Boolean `active`. With positive stock, `active: false` saves as INACTIVE;
+`active: true` publishes as ACTIVE. Zero stock always creates INACTIVE, regardless
+of `active`. Omitting `active` or sending `null` preserves existing behavior:
+positive stock creates ACTIVE and zero stock creates INACTIVE.
+
+Creation uses only existing ACTIVE and INACTIVE status codes; it never creates
+DELETED or introduces a DRAFT status. Client owner IDs, status IDs and status codes
+are not writable fields. Existing title, price and stock validation is unchanged.
+The response retains the existing structure and returns the persisted `statusCode`.
+
 ### Owner product replacement
 
 `PUT /users/me/products/{id}` requires a bearer JWT and replaces title, price,

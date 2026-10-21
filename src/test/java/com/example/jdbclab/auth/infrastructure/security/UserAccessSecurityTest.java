@@ -346,6 +346,33 @@ class UserAccessSecurityTest {
     }
 
     @Test
+    void creationHonorsActiveChoiceStockPrecedenceAndTrustedOwnership() throws Exception {
+        createProducts();
+        for (int stock : new int[]{0, 5}) {
+            for (String active : new String[]{"", ",\"active\":null", ",\"active\":true", ",\"active\":false"}) {
+                String target = stock > 0 && !active.endsWith("false") ? "ACTIVE" : "INACTIVE";
+                String body = "{\"title\":\"Product\",\"price\":49.90,\"stock\":" + stock + active
+                        + ",\"ownerUserId\":2,\"user_id\":2,\"status_id\":3,\"statusId\":3,\"statusCode\":\"DELETED\"}";
+                var result = mvc.perform(post("/users/me/products").contentType(MediaType.APPLICATION_JSON)
+                                .header("Authorization", "Bearer " + tokens.issue(1L).value()).content(body))
+                        .andExpect(status().isCreated()).andExpect(jsonPath("$.length()").value(6))
+                        .andExpect(jsonPath("$.statusCode").value(target)).andReturn();
+                Number id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+                org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                        "SELECT user_id FROM products WHERE id = ?", Long.class, id.longValue())).isEqualTo(1L);
+                org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                        "SELECT s.code FROM products p JOIN product_statuses s ON s.id = p.status_id WHERE p.id = ?",
+                        String.class, id.longValue())).isEqualTo(target);
+                mvc.perform(get("/users/me/products/" + id.longValue())
+                                .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                        .andExpect(status().isOk()).andExpect(jsonPath("$.statusCode").value(target));
+                mvc.perform(get("/catalog/products/" + id.longValue()))
+                        .andExpect(target.equals("ACTIVE") ? status().isOk() : status().isNotFound());
+            }
+        }
+    }
+
+    @Test
     void invalidCreationInputIs400AndDoesNotInsert() throws Exception {
         createProducts();
         String valid = "{\"title\":\"Product\",\"price\":1.00,\"stock\":1}";

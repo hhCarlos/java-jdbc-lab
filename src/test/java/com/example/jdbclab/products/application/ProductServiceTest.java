@@ -91,22 +91,46 @@ class ProductServiceTest {
             String status = stock > 0 ? "ACTIVE" : "INACTIVE";
             var saved = new OwnedProduct(8L, "Product", new BigDecimal("9999999999.99"), null, stock, status);
             when(repository.insert(7L, "Product", saved.price(), null, stock, status)).thenReturn(saved);
-            assertThat(service.create(7L, "Product", saved.price(), null, stock)).isSameAs(saved);
+            assertThat(service.create(7L, "Product", saved.price(), null, stock, null)).isSameAs(saved);
             verify(repository).insert(7L, "Product", saved.price(), null, stock, status);
         }
+    }
+
+    @Test
+    void creationHonorsPublicationChoiceAndZeroStockPrecedence() {
+        for (long stock : new long[]{0, 5}) {
+            for (Boolean active : new Boolean[]{false, true, null}) {
+                reset(repository);
+                String target = stock > 0 && !Boolean.FALSE.equals(active) ? "ACTIVE" : "INACTIVE";
+                var saved = new OwnedProduct(8L, "Product", BigDecimal.ONE, null, stock, target);
+                when(repository.insert(7L, "Product", BigDecimal.ONE, null, stock, target)).thenReturn(saved);
+                assertThat(service.create(7L, "Product", BigDecimal.ONE, null, stock, active)).isSameAs(saved);
+                verify(repository).insert(7L, "Product", BigDecimal.ONE, null, stock, target);
+                verifyNoMoreInteractions(repository);
+            }
+        }
+    }
+
+    @Test
+    void inactiveCreationStillValidatesFieldsAndRequiresTrustedOwner() {
+        assertThatNullPointerException().isThrownBy(() -> service.create(null, "Product", BigDecimal.ONE, null, 5, false));
+        assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, " ", BigDecimal.ONE, null, 5, false));
+        assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, "Product", new BigDecimal("-1"), null, 5, false));
+        assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, "Product", BigDecimal.ONE, null, -1, false));
+        verifyNoInteractions(repository);
     }
 
     @Test
     void creationRejectsInvalidValuesBeforePersistence() {
         for (BigDecimal price : new BigDecimal[]{null, new BigDecimal("-1"), new BigDecimal("0.001"),
                 new BigDecimal("10000000000")}) {
-            assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, "Product", price, null, 0));
+            assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, "Product", price, null, 0, null));
         }
         for (String title : new String[]{null, " ", "x".repeat(51)}) {
-            assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, title, BigDecimal.ONE, null, 0));
+            assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, title, BigDecimal.ONE, null, 0, null));
         }
         for (long stock : new long[]{-1, 10000000000L}) {
-            assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, "Product", BigDecimal.ONE, null, stock));
+            assertThatIllegalArgumentException().isThrownBy(() -> service.create(7L, "Product", BigDecimal.ONE, null, stock, null));
         }
         verifyNoInteractions(repository);
     }

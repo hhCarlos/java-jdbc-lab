@@ -56,14 +56,14 @@ class ProductCreationTransactionTest {
             var jdbc = context.getBean(JdbcTemplate.class);
             jdbc.execute("CREATE TABLE creation_effect (id BIGINT PRIMARY KEY)");
             var repository = context.getBean(ProductRepository.class);
-            when(repository.insert(7L, "Product", BigDecimal.ONE, null, 1, "ACTIVE"))
+            when(repository.insert(7L, "Product", BigDecimal.ONE, null, 1, "INACTIVE"))
                     .thenAnswer(invocation -> {
                         assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
                         jdbc.update("INSERT INTO creation_effect VALUES (?)", 1);
                         throw new IllegalStateException("Simulated persistence failure");
                     });
             assertThatThrownBy(() -> context.getBean(ProductService.class)
-                    .create(7L, "Product", BigDecimal.ONE, null, 1))
+                    .create(7L, "Product", BigDecimal.ONE, null, 1, false))
                     .isInstanceOf(IllegalStateException.class);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM creation_effect", Long.class)).isZero();
         }

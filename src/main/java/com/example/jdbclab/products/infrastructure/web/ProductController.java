@@ -100,7 +100,7 @@ public class ProductController {
         return products.findByOwnerId(currentUser.id(), page, pageSize);
     }
 
-    @Operation(summary = "Create my product", description = "Owner is the authenticated user. Positive stock creates ACTIVE status; zero stock creates INACTIVE status. Ownership and status supplied by clients are ignored.")
+    @Operation(summary = "Create my product", description = "Owner is the authenticated user. Optional active=false creates INACTIVE even with positive stock. Active=true creates ACTIVE only with positive stock. Zero stock always creates INACTIVE. Omitted or null active preserves the stock-driven default: positive stock creates ACTIVE, zero stock creates INACTIVE. Creation as DELETED is never allowed. Ownership and status supplied by clients are ignored.")
     @ApiResponse(responseCode = "201", description = "Product created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = OwnedProduct.class)))
     @ApiResponse(responseCode = "400", description = "Invalid JSON or product input",
@@ -115,7 +115,7 @@ public class ProductController {
             @Valid @RequestBody CreateProductRequest request) {
         var currentUser = users.findCurrentUser(principal.getSubject());
         return ResponseEntity.status(201).body(products.create(currentUser.id(), request.title(),
-                request.price(), request.description(), request.stock().longValueExact()));
+                request.price(), request.description(), request.stock().longValueExact(), request.active()));
     }
 
     @Operation(summary = "Replace my product fields", description = "Replaces title, price, description and stock. Omitted or null description clears it. Owner is resolved from the bearer token; client ownership and status fields are ignored. Optional active=true publishes and active=false suspends with positive stock. Zero stock always forces INACTIVE regardless of active. Omitted or null active preserves the current publication status with positive stock, so restocking alone never reactivates INACTIVE. Deleted products cannot be updated.")

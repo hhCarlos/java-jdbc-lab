@@ -1,40 +1,37 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T19:23:50-06:00
+Recorded at: 2026-10-20T19:29:42-06:00
 
 Task prompt:
 
-Diagnose why changing publication status in ProductForm edit mode is not working.
+Extend backend product creation to support saving a product as inactive.
 
-Follow AGENTS.md and all applicable task prerequisites.
+Follow AGENTS.md and all applicable database rules.
 
-Authoritative statuses:
-1 = ACTIVE
-2 = INACTIVE
-3 = DELETED
+Endpoint:
+POST /users/me/products
 
-Trace the actual flow:
-- GET response and its frontend model.
-- Initialization of the suspended checkbox.
-- Checkbox changes and edit-submission eligibility.
-- Serialized PUT payload.
-- Backend request binding, status decision, repository parameters, and returned status.
+Add an optional Boolean active field to the creation request.
 
-Expected behavior:
-- ACTIVE initializes suspended=false.
-- INACTIVE initializes suspended=true.
-- Positive stock enables the checkbox.
-- Checked sends active=false and results in INACTIVE.
-- Unchecked sends active=true and results in ACTIVE when stock is positive.
-- Zero stock forces INACTIVE.
-- DELETED remains unavailable.
-- A status-only edit must enable saving.
-- Both checkbox values are valid; do not require it to be checked.
+Business rules:
+- active=false creates an INACTIVE product, regardless of positive stock.
+- active=true creates ACTIVE only when stock is greater than zero.
+- Zero stock always creates INACTIVE.
+- When active is omitted or null, preserve existing behavior: positive stock creates ACTIVE; zero stock creates INACTIVE.
+- Use existing status codes ACTIVE and INACTIVE. Do not introduce a DRAFT status.
+- Never allow creation as DELETED.
 
-Use the actual response field names and types. Do not assume whether the API returns a numeric status ID or a status code. Ensure disabled controls do not accidentally remove active from the payload.
+Implementation:
+- Extend request binding and application/domain logic.
+- Preserve existing field validation and authenticated ownership resolution.
+- Do not accept owner IDs, raw status IDs, or status codes from the client.
+- Reuse the repository's existing status-code insertion capability.
+- Update affected service signatures and TransactionalProductService overrides so transaction handling remains effective.
+- Return the authoritative resulting status through the existing response structure.
+- Preserve PUT behavior and all other product operations.
+- Update OpenAPI and relevant business-rule documentation.
+- Do not change the database schema or front-end/.
 
-The PUT contract uses active, not a client-supplied status_id.
+Test explicit active=false with positive stock, active=true with positive stock, zero-stock precedence, omitted/null compatibility, and existing ownership and validation behavior.
 
-Inspect before changing code. Fix the identified frontend defect within front-end/. If evidence identifies a backend defect, report the exact mismatch before making backend changes.
-
-Add a regression test reproducing the identified failure, run relevant tests and the Angular build, and report the root cause and fix. Never log tokens or credentials.
+Run relevant backend tests. Report results and provide example payloads for normal publication and saving as inactive.

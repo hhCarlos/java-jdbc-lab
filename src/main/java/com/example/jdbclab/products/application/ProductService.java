@@ -43,11 +43,11 @@ public class ProductService {
         return repository.findByOwnerId(ownerUserId, (long) page * pageSize, pageSize);
     }
 
-    public OwnedProduct create(Long ownerUserId, String title, BigDecimal price, String description, long stock) {
+    public OwnedProduct create(Long ownerUserId, String title, BigDecimal price, String description, long stock, Boolean active) {
         Objects.requireNonNull(ownerUserId, "Owner user ID is required.");
         validateFields(title, price, stock);
         return repository.insert(ownerUserId, title, price, description, stock,
-                stock > 0 ? "ACTIVE" : "INACTIVE");
+                stock > 0 && !Boolean.FALSE.equals(active) ? "ACTIVE" : "INACTIVE");
     }
 
     public OwnedProduct update(Long productId, Long ownerUserId, String title, BigDecimal price,

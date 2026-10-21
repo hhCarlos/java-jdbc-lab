@@ -20,8 +20,8 @@ public class TransactionalProductService extends ProductService {
 
     @Override
     @Transactional
-    public OwnedProduct create(Long ownerUserId, String title, BigDecimal price, String description, long stock) {
-        return super.create(ownerUserId, title, price, description, stock);
+    public OwnedProduct create(Long ownerUserId, String title, BigDecimal price, String description, long stock, Boolean active) {
+        return super.create(ownerUserId, title, price, description, stock, active);
     }
     @Override
     @Transactional

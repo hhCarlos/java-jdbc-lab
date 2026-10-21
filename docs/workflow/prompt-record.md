@@ -31,3 +31,17 @@ Record only the user's task instructions, not system instructions, internal reas
 Replace the previous entry. LAST_PROMPT.md stores only the latest task; Git provides the history when changes are committed.
 
 Updating this file is an expected modification during the current task. Do not automatically commit it.
+
+## Report changed files
+
+When the task is finished, list every file changed during the task, including LAST_PROMPT.md.
+
+For each file:
+- Provide its repository-relative path.
+- Identify whether it was added, modified, deleted, or renamed.
+- Briefly describe the change.
+- For renamed files, include both the original and new paths.
+
+Verify the list against the Git diff and status, including untracked files. Distinguish task changes from any unrelated changes.
+
+If no files changed, state that explicitly. Do not imply changes were committed unless a commit was explicitly requested and completed.
