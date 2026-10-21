@@ -204,6 +204,31 @@ describe('Product form', () => {
       .toBe('icons/sprite.svg#information');
   });
 
+  it.each(['ACTIVE', 'INACTIVE'])('saves a status-only %s edit through native controls without forced change detection', async statusCode => {
+    const { fixture, element, form, button } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34, statusCode });
+    await fixture.whenStable();
+    const checkbox = element.querySelector<HTMLInputElement>('#product-suspended')!;
+    expect(checkbox.disabled).toBe(false);
+    expect(checkbox.checked).toBe(statusCode === 'INACTIVE');
+    expect(button('Save changes').disabled).toBe(true);
+    checkbox.click();
+    await fixture.whenStable();
+    expect(form.valid).toBe(true);
+    expect(form.dirty).toBe(true);
+    expect(button('Save changes').disabled).toBe(false);
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    button('Save changes').click();
+    const pending = http.expectOne('/api/users/me/products/42');
+    expect(pending.request.method).toBe('PUT');
+    expect(pending.request.body).toEqual({ title: product.title, price: 12.34,
+      description: '', stock: 3, active: statusCode === 'INACTIVE' });
+    pending.flush({ ...product, price: 12.34, statusCode: statusCode === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' });
+    await fixture.whenStable();
+    expect(form.pristine).toBe(true);
+  });
+
   it.each(['ACTIVE', 'INACTIVE'])('tracks checkbox edits and maps %s suspension to PUT active', statusCode => {
     const { fixture, element, form, button, submit } = editSetup('42');
     const http = TestBed.inject(HttpTestingController);

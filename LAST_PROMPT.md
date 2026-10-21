@@ -1,26 +1,40 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T19:20:49-06:00
+Recorded at: 2026-10-20T19:23:50-06:00
 
 Task prompt:
 
-Verify and complete publication-intent handling in ProductForm edit mode.
+Diagnose why changing publication status in ProductForm edit mode is not working.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Reuse the existing suspended checkbox; do not add another field.
+Authoritative statuses:
+1 = ACTIVE
+2 = INACTIVE
+3 = DELETED
 
-Requirements:
-- Restocking must enable the checkbox without automatically unchecking it.
-- With positive stock and suspension checked, submit active=false.
-- With positive stock and suspension unchecked, submit active=true.
-- With zero stock, keep suspension checked and disabled, and submit active=false.
-- Include the explicit active value in every edit request, even when the suspension control is disabled.
-- Preserve the user's selection while editing other fields.
-- Count an explicit suspension change toward edit submission eligibility.
-- Preserve existing validation, loading, notifications, and Cancel confirmation.
-- Keep create mode unchanged.
+Trace the actual flow:
+- GET response and its frontend model.
+- Initialization of the suspended checkbox.
+- Checkbox changes and edit-submission eligibility.
+- Serialized PUT payload.
+- Backend request binding, status decision, repository parameters, and returned status.
 
-Inspect the existing implementation first and change only what is missing.
+Expected behavior:
+- ACTIVE initializes suspended=false.
+- INACTIVE initializes suspended=true.
+- Positive stock enables the checkbox.
+- Checked sends active=false and results in INACTIVE.
+- Unchecked sends active=true and results in ACTIVE when stock is positive.
+- Zero stock forces INACTIVE.
+- DELETED remains unavailable.
+- A status-only edit must enable saving.
+- Both checkbox values are valid; do not require it to be checked.
 
-Test both restocking scenarios, zero-stock behavior, and a status-only edit with positive stock. Run relevant frontend tests and the Angular build, then report results.
+Use the actual response field names and types. Do not assume whether the API returns a numeric status ID or a status code. Ensure disabled controls do not accidentally remove active from the payload.
+
+The PUT contract uses active, not a client-supplied status_id.
+
+Inspect before changing code. Fix the identified frontend defect within front-end/. If evidence identifies a backend defect, report the exact mismatch before making backend changes.
+
+Add a regression test reproducing the identified failure, run relevant tests and the Angular build, and report the root cause and fix. Never log tokens or credentials.
