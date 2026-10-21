@@ -743,3 +743,26 @@ Missing, deleted, and other owners' products return the same 404. No product is
 created or restored. Lookup, status selection, affected-row verification, and
 readback run in one transaction. Identical repeated replacements return 200 with
 the same product values. Invalid input returns 400; missing/invalid JWT returns 401.
+
+### Owner product soft deletion
+
+`DELETE /users/me/products/{id}` requires a valid bearer JWT and a positive product
+ID. The owner is resolved from the authenticated account; no request body, owner ID,
+or target status is accepted as input. ACTIVE and INACTIVE products, including zero
+stock, can be soft-deleted. A transaction calls the owner-scoped repository update
+and checks its affected-row count. Only publication status changes to DELETED;
+the row, ownership, title, price, description, and stock are preserved.
+
+Success returns **204 with no body**. Missing, already-deleted, and another owner's
+products receive the same **404** problem response. Invalid IDs return **400**.
+Missing, invalid, or expired JWTs and nonexistent authenticated accounts return
+**401** with a Bearer challenge. Deleted products are excluded from owner and public
+listings and lookups. There is no physical deletion or recovery operation.
+The dev OpenAPI specification documents the bearer requirement and responses.
+
+Using the configured default application port 8080:
+
+```sh
+curl -i -X DELETE http://localhost:8080/users/me/products/1 \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```

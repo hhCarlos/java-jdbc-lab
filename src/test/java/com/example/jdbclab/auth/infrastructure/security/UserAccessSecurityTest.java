@@ -88,6 +88,120 @@ class UserAccessSecurityTest {
     }
 
     @Test
+    void deletionReturns204PreservesDataAndRemovesProductsFromAllReads() throws Exception {
+        createProducts();
+        String header = "Bearer " + tokens.issue(1L).value();
+        for (String initial : new String[]{"ACTIVE", "INACTIVE"}) {
+            for (int stock : new int[]{0, 5}) {
+                product(1, "Keep title", initial, stock);
+                Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+                String description = "Description ' ? ".repeat(1000);
+                jdbc.update("UPDATE products SET description = ? WHERE id = ?", description, id);
+                mvc.perform(delete("/users/me/products/" + id).header("Authorization", header)
+                                .param("ownerUserId", "2").param("statusCode", "ACTIVE"))
+                        .andExpect(status().isNoContent()).andExpect(content().string(""));
+                var stored = jdbc.queryForObject("""
+                        SELECT p.*, s.code FROM products p JOIN product_statuses s ON s.id = p.status_id
+                        WHERE p.id = ?
+                        """, (row, number) -> java.util.List.of(row.getLong("id"), row.getLong("user_id"),
+                        row.getString("title"), row.getBigDecimal("price"), row.getString("description"),
+                        row.getLong("stock"), row.getString("code")), id);
+                org.assertj.core.api.Assertions.assertThat(stored).containsExactly(id, 1L, "Keep title",
+                        new java.math.BigDecimal("12.34"), description, (long) stock, "DELETED");
+                mvc.perform(get("/users/me/products/" + id).header("Authorization", header))
+                        .andExpect(status().isNotFound());
+                mvc.perform(get("/catalog/products/" + id)).andExpect(status().isNotFound());
+                mvc.perform(delete("/users/me/products/" + id).header("Authorization", header))
+                        .andExpect(status().isNotFound());
+            }
+        }
+        mvc.perform(get("/users/me/products").header("Authorization", header))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+        mvc.perform(get("/catalog/products")).andExpect(status().isOk()).andExpect(content().json("[]"));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Long.class))
+                .isEqualTo(4L);
+    }
+
+    @Test
+    void deletionReturnsIdentical404ForOtherOwnerAlreadyDeletedAndMissingProducts() throws Exception {
+        createProducts();
+        product(2, "Private", "ACTIVE", 5);
+        Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+        String path = "/users/me/products/" + id;
+        String header = "Bearer " + tokens.issue(1L).value();
+        String first = mvc.perform(delete(path).header("Authorization", header).param("ownerUserId", "2"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Product with id " + id + " was not found."))
+                .andReturn().getResponse().getContentAsString();
+        mvc.perform(get(path).header("Authorization", "Bearer " + tokens.issue(2L).value()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.statusCode").value("ACTIVE"));
+        // The actual owner can delete; the original caller still receives the same response.
+        mvc.perform(delete(path).header("Authorization", "Bearer " + tokens.issue(2L).value()))
+                .andExpect(status().isNoContent());
+        mvc.perform(delete(path).header("Authorization", header))
+                .andExpect(status().isNotFound()).andExpect(content().json(first));
+        jdbc.update("UPDATE products SET user_id = ? WHERE id = ?", 1L, id);
+        mvc.perform(delete(path).header("Authorization", header))
+                .andExpect(status().isNotFound()).andExpect(content().json(first));
+        jdbc.update("DELETE FROM products WHERE id = ?", id);
+        mvc.perform(delete(path).header("Authorization", header))
+                .andExpect(status().isNotFound()).andExpect(content().json(first));
+    }
+
+    @Test
+    void deletionRejectsInvalidIdsWithoutChangingProduct() throws Exception {
+        createProducts();
+        product(1, "Original", "ACTIVE", 5);
+        for (String id : new String[]{"0", "-1", "no", "1.5", "9223372036854775808"}) {
+            mvc.perform(delete("/users/me/products/" + id)
+                            .header("Authorization", "Bearer " + tokens.issue(1L).value()))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400));
+        }
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("""
+                SELECT s.code FROM products p JOIN product_statuses s ON s.id = p.status_id
+                """, String.class)).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void deletionRejectsMissingInvalidExpiredAndUnresolvableAuthentication() throws Exception {
+        createProducts();
+        product(2, "Protected", "ACTIVE", 5);
+        Long id = jdbc.queryForObject("SELECT MAX(id) FROM products", Long.class);
+        jdbc.update("DELETE FROM users WHERE id = ?", 1);
+        for (String token : new String[]{null, "not-a-jwt", tokens.issue(1L).value(), tokens.issue(999L).value(),
+                signed(claims().subject("not-an-id").build(), MacAlgorithm.HS256),
+                signed(claims().expiresAt(Instant.now().minusSeconds(1)).build(), MacAlgorithm.HS256)}) {
+            var request = delete("/users/me/products/" + id);
+            if (token != null) request.header("Authorization", "Bearer " + token);
+            mvc.perform(request).andExpect(status().isUnauthorized())
+                    .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                    .andExpect(jsonPath("$.status").value(401));
+        }
+        mvc.perform(delete("/users/me/products/" + id).param("access_token", tokens.issue(2L).value()))
+                .andExpect(status().isUnauthorized());
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("""
+                SELECT s.code FROM products p JOIN product_statuses s ON s.id = p.status_id
+                """, String.class)).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void openApiDocumentsSoftDeletionBearerAndBodyless204() throws Exception {
+        mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.security[0].bearerAuth").isArray())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.description", containsString("ACTIVE or INACTIVE")))
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.responses['204']").exists())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.responses['204'].content").doesNotExist())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.responses['400']").exists())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.responses['401']").exists())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.responses['404']").exists())
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.parameters", hasSize(1)))
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.parameters[0].name").value("id"))
+                .andExpect(jsonPath("$.paths['/users/me/products/{id}'].delete.requestBody").doesNotExist());
+    }
+
+    @Test
     void retrievesOwnProductIncludingInactiveAndZeroStockWithAllEditFields() throws Exception {
         createProducts();
         for (String state : new String[]{"ACTIVE", "INACTIVE"}) {

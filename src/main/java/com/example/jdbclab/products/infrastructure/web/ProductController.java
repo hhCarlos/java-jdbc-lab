@@ -23,6 +23,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -38,6 +39,25 @@ public class ProductController {
     public ProductController(ProductService products, UserService users) {
         this.products = products;
         this.users = users;
+    }
+
+    @Operation(summary = "Soft-delete my product", description = "Requires a valid bearer JWT. Owner is resolved from the authenticated account; no client owner or target status is accepted. Changes ACTIVE or INACTIVE to DELETED, preserving the row and all other fields. Deleted products disappear from owner and public listings and lookups. Repeated deletion returns 404; no recovery is provided.")
+    @ApiResponse(responseCode = "204", description = "Product soft-deleted; no response body", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Invalid product ID",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer token is missing, invalid, expired, or its user no longer exists",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "404", description = "Product is missing, owned by another user, or already deleted; identical response",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected failure; details are sanitized",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> softDelete(
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt principal,
+            @Parameter(description = "Positive product ID", example = "1") @PathVariable @Positive Long id) {
+        var currentUser = users.findCurrentUser(principal.getSubject());
+        products.softDeleteByIdAndOwnerId(id, currentUser.id());
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Find my product by ID", description = "Owner is resolved from the bearer token. Includes inactive and zero-stock products; excludes deleted products.")

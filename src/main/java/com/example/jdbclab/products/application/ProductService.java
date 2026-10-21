@@ -15,6 +15,16 @@ public class ProductService {
         this.repository = repository;
     }
 
+    public void softDeleteByIdAndOwnerId(Long productId, Long ownerUserId) {
+        Objects.requireNonNull(ownerUserId, "Owner user ID is required.");
+        if (productId == null || productId <= 0) {
+            throw new IllegalArgumentException("Product ID must be positive.");
+        }
+        int affected = repository.softDeleteByIdAndOwnerId(productId, ownerUserId);
+        if (affected == 0) throw new ProductNotFoundException(productId);
+        if (affected != 1) throw new IllegalStateException("Product soft deletion affected an unexpected number of rows.");
+    }
+
     public OwnedProduct findByIdAndOwnerId(Long productId, Long ownerUserId) {
         Objects.requireNonNull(ownerUserId, "Owner user ID is required.");
         if (productId == null || productId <= 0) {

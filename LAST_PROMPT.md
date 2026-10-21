@@ -2,32 +2,36 @@
 
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T17:06:25-06:00
+Recorded at: 2026-10-20T18:29:48-06:00
 
 ## Task prompt
 
-Add an owner-scoped soft-delete operation to the existing backend products repository.
+Expose product soft deletion through the application service and existing owner-products controller.
 
-Follow AGENTS.md and all applicable database rules. Inspect the existing repository, JDBC implementation, status lookup conventions, and tests.
+Follow AGENTS.md and all applicable task prerequisites. Reuse the repository soft-delete operation already implemented.
+
+Endpoint:
+DELETE /users/me/products/{id}
 
 Requirements:
-- Extend the existing repository abstraction and implementation.
-- Use a clear method name such as softDeleteByIdAndOwnerId.
-- Accept product ID and owner user ID.
-- Change only status_id to the ID associated with code DELETED.
-- Perform the change in one atomic, parameterized UPDATE.
-- Include product ID, ownership, and allowed current statuses in the SQL conditions.
-- Allow deletion of ACTIVE and INACTIVE products.
-- Return the affected-row result.
-- Return no matching update for missing, already-deleted, or another user's products.
-- Preserve the product row, ownership, and all other data.
-- Do not implement physical deletion, recovery, schema changes, services, controllers, or frontend changes.
+- Require a valid bearer JWT.
+- Resolve the owner through the existing authenticated-user mechanism.
+- Never accept an owner user ID or target status from the client.
+- Keep the application service independent of HTTP and Spring Security types.
+- Validate the product ID using existing conventions.
+- Delegate to the owner-scoped repository operation within a transaction.
+- Check the affected-row result.
+- Return HTTP 204 with no response body when deletion succeeds.
+- Return the same HTTP 404 response for missing, already-deleted, or another user's products.
+- Preserve existing authentication behavior, including nonexistent authenticated accounts.
+- Allow soft deletion of ACTIVE and INACTIVE products.
+- Change publication status to DELETED while preserving the row and all other data.
+- Do not perform physical deletion or implement recovery.
 
-Add focused repository tests covering:
-- Deleting active and inactive products.
-- Ownership isolation.
-- Missing and already-deleted products.
-- Preservation of other product fields.
-- Deleted products being excluded by existing owner and public lookup/listing operations.
+Document the endpoint, bearer requirement, soft-delete semantics, and responses in OpenAPI. Update relevant business-rule documentation.
 
-Run relevant tests using the existing isolated test setup. Report results, show the final SQL and parameter order, and distinguish Oracle verification from H2 or mocked tests.
+Preserve existing product operations and security configuration. Do not introduce roles, schema changes, or frontend integration.
+
+Add focused service and HTTP/security tests for successful deletion, ownership isolation, missing/already-deleted products, invalid IDs, and missing/invalid/expired authentication. Verify deleted products are unavailable through existing listings and lookups.
+
+Run relevant tests and report results. Provide a sample authenticated DELETE request using the configured application port.

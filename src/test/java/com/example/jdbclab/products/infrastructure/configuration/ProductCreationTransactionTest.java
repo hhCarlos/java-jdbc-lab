@@ -34,6 +34,23 @@ class ProductCreationTransactionTest {
     }
 
     @Test
+    void softDeletionRunsInTransactionAndUnexpectedRowCountRollsBack() {
+        try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
+            var jdbc = context.getBean(JdbcTemplate.class);
+            jdbc.execute("CREATE TABLE deletion_effect (id BIGINT PRIMARY KEY)");
+            var repository = context.getBean(ProductRepository.class);
+            when(repository.softDeleteByIdAndOwnerId(8L, 7L)).thenAnswer(invocation -> {
+                assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
+                jdbc.update("INSERT INTO deletion_effect VALUES (?)", 8);
+                return 2;
+            });
+            assertThatIllegalStateException().isThrownBy(() -> context.getBean(ProductService.class)
+                    .softDeleteByIdAndOwnerId(8L, 7L));
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM deletion_effect", Long.class)).isZero();
+        }
+    }
+
+    @Test
     void creationRunsInsideTransactionAndRollsBackOnFailure() {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var jdbc = context.getBean(JdbcTemplate.class);

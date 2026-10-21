@@ -30,6 +30,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/me/products").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/users/me/products/{id}").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/users/me/products/{id}").authenticated()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/catalog/products", "/catalog/products/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users", "/users/me", "/users/me/products", "/users/me/products/{id}", "/users/{id}").authenticated()

@@ -14,6 +14,33 @@ class ProductServiceTest {
     private final ProductService service = new ProductService(repository);
 
     @Test
+    void softDeletionDelegatesTrustedIdsWithoutReadingOrSelectingClientStatus() {
+        when(repository.softDeleteByIdAndOwnerId(8L, 7L)).thenReturn(1);
+        service.softDeleteByIdAndOwnerId(8L, 7L);
+        verify(repository).softDeleteByIdAndOwnerId(8L, 7L);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void softDeletionMapsZeroRowsToNotFoundAndRejectsUnexpectedRowCounts() {
+        when(repository.softDeleteByIdAndOwnerId(8L, 7L)).thenReturn(0, 2, -1);
+        assertThatThrownBy(() -> service.softDeleteByIdAndOwnerId(8L, 7L))
+                .isInstanceOf(ProductNotFoundException.class).hasMessage("Product with id 8 was not found.");
+        for (int attempt = 0; attempt < 2; attempt++) {
+            assertThatIllegalStateException().isThrownBy(() -> service.softDeleteByIdAndOwnerId(8L, 7L));
+        }
+    }
+
+    @Test
+    void softDeletionValidatesIdsBeforePersistence() {
+        for (Long id : new Long[]{null, 0L, -1L}) {
+            assertThatIllegalArgumentException().isThrownBy(() -> service.softDeleteByIdAndOwnerId(id, 7L));
+        }
+        assertThatNullPointerException().isThrownBy(() -> service.softDeleteByIdAndOwnerId(8L, null));
+        verifyNoInteractions(repository);
+    }
+
+    @Test
     void lookupDelegatesBothIdsAndReturnsActiveInactiveAndZeroStockProducts() {
         for (String status : new String[]{"ACTIVE", "INACTIVE"}) {
             for (long stock : new long[]{0, 5}) {

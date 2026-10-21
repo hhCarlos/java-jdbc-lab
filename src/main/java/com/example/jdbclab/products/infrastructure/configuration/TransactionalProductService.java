@@ -14,6 +14,12 @@ public class TransactionalProductService extends ProductService {
 
     @Override
     @Transactional
+    public void softDeleteByIdAndOwnerId(Long productId, Long ownerUserId) {
+        super.softDeleteByIdAndOwnerId(productId, ownerUserId);
+    }
+
+    @Override
+    @Transactional
     public OwnedProduct create(Long ownerUserId, String title, BigDecimal price, String description, long stock) {
         return super.create(ownerUserId, title, price, description, stock);
     }
