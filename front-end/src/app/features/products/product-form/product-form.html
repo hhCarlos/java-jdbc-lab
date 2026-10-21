@@ -38,6 +38,10 @@
     <div class="product-form__actions">
       <app-button [label]="mode() === 'edit' ? 'Save changes' : 'Create product'" status="success" variant="ghost" type="submit"
         [disabled]="!canSubmit()" />
+      @if (mode() === 'create') {
+        <app-button label="Save as draft" variant="ghost" status="warning" type="button"
+          [disabled]="!canSaveDraft()" (pressed)="saveAsDraft()" />
+      }
       <app-button label="Cancel" status="error" variant="ghost" (pressed)="cancel()" />
       @if (mode() === 'edit' && productLoaded()) {
         <app-button label="Delete product" status="error" type="button" [disabled]="!canDelete()" (pressed)="requestDeletion()" />

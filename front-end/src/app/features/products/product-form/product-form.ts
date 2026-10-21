@@ -191,7 +191,22 @@ export class ProductForm {
         && this.productId() !== null && this.form.dirty));
   }
 
+  protected canSaveDraft(): boolean {
+    const stock = this.form.controls.stock;
+    return this.mode() === 'create' && this.canSubmit() && stock.enabled && stock.valid
+      && Number.isInteger(Number(stock.value)) && Number(stock.value) > 0;
+  }
+
+  protected saveAsDraft(): void {
+    if (!this.canSaveDraft()) return;
+    this.submitProduct(true);
+  }
+
   protected submit(): void {
+    this.submitProduct(false);
+  }
+
+  private submitProduct(draft: boolean): void {
     const editing = this.mode() === 'edit';
     const id = this.productId();
     if (this.submitting() || this.deleteConfirmationOpen() || (editing && (!this.productLoaded() || this.loading()
@@ -211,6 +226,7 @@ export class ProductForm {
       description: values.description,
       stock: Number(values.stock),
     };
+    if (draft) request.active = false;
     this.submitting.set(true);
     this.syncSuspensionState();
     const releaseLoader = this.loader.show();
@@ -227,13 +243,15 @@ export class ProductForm {
         this.form.markAsPristine();
         this.notifications.publish({
           status: 'success',
-          message: editing ? 'Product updated successfully.' : 'Product created successfully.',
+          message: draft ? 'Product saved as draft.'
+            : editing ? 'Product updated successfully.' : 'Product created successfully.',
         });
         void this.router.navigate(['/app/products']);
       },
       error: () => this.notifications.publish({
         status: 'error',
-        message: editing ? 'Unable to update the product. Please try again.'
+        message: draft ? 'Unable to save the product as a draft. Please try again.'
+          : editing ? 'Unable to update the product. Please try again.'
           : 'Unable to create the product. Please try again.',
       }),
     });

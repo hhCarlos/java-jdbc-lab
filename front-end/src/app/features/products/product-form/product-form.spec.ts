@@ -663,6 +663,114 @@ describe('Product form', () => {
     TestBed.inject(HttpTestingController).expectNone(() => true);
   });
 
+  it.each(['', '0', '-1', '1.5', '10000000000', 'abc'])('blocks draft button and handler with stock %j', stock => {
+    const { fixture, input, button } = setup();
+    input('title', 'Notebook'); input('price', '12.50'); input('stock', stock);
+    fixture.detectChanges();
+    expect(button('Save as draft').disabled).toBe(true);
+    button('Save as draft').click();
+    fixture.componentInstance['saveAsDraft']();
+    TestBed.inject(HttpTestingController).expectNone(() => true);
+    if (stock === '0') expect(button('Create product').disabled).toBe(false);
+  });
+
+  it('requires a valid form and completed validation for draft button and handler', () => {
+    const { fixture, input, button, form } = setup();
+    const draft = button('Save as draft');
+    expect(draft.type).toBe('button');
+    expect(draft.classList.contains('app-button--warning')).toBe(true);
+    expect(draft.classList.contains('app-button--ghost')).toBe(true);
+    input('stock', '5'); fixture.detectChanges();
+    expect(draft.disabled).toBe(true);
+    fixture.componentInstance['saveAsDraft']();
+    input('title', 'Notebook'); input('price', '12.345'); fixture.detectChanges();
+    expect(draft.disabled).toBe(true);
+    fixture.componentInstance['saveAsDraft']();
+    input('price', '12.34'); fixture.detectChanges();
+    expect(draft.disabled).toBe(false);
+    form.markAsPending(); fixture.detectChanges();
+    expect(draft.disabled).toBe(true);
+    fixture.componentInstance['saveAsDraft']();
+    TestBed.inject(HttpTestingController).expectNone(() => true);
+  });
+
+  it.each(['draft', 'normal'])('prevents duplicate writes across both creation actions when %s starts first', first => {
+    const { fixture, input, button, submit, form } = setup();
+    input('title', 'Notebook'); input('price', '0012.50'); input('description', 'Details'); input('stock', '3');
+    fixture.detectChanges();
+    const values = form.getRawValue();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    if (first === 'draft') button('Save as draft').click();
+    else submit();
+    fixture.detectChanges();
+    expect(button('Create product').disabled).toBe(true);
+    expect(button('Save as draft').disabled).toBe(true);
+    fixture.componentInstance['saveAsDraft'](); submit();
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/users/me/products');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ title: 'Notebook', price: 12.5, description: 'Details', stock: 3,
+      ...(first === 'draft' ? { active: false } : {}) });
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(true);
+    expect(form.getRawValue()).toEqual(values);
+    request.flush({ ...product, statusCode: first === 'draft' ? 'INACTIVE' : 'ACTIVE' });
+    expect(form.pristine).toBe(true);
+    expect(form.getRawValue()).toEqual(values);
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({ status: 'success',
+      message: first === 'draft' ? 'Product saved as draft.' : 'Product created successfully.' });
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+  });
+
+  it('preserves failed draft values, Cancel confirmation, and permits retry', () => {
+    const { fixture, input, form, button } = setup();
+    input('title', 'Notebook'); input('price', '0012.50'); input('stock', '3');
+    fixture.detectChanges();
+    const values = form.getRawValue();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    button('Save as draft').click();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products').flush({}, { status: 500, statusText: 'Failure' });
+    fixture.detectChanges();
+    expect(form.getRawValue()).toEqual(values);
+    expect(form.dirty).toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({ status: 'error',
+      message: 'Unable to save the product as a draft. Please try again.' });
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+    expect(button('Save as draft').disabled).toBe(false);
+    button('Cancel').click(); fixture.detectChanges();
+    expect(fixture.componentInstance['cancelConfirmationOpen']()).toBe(true);
+    button('Keep editing').click(); fixture.detectChanges();
+    button('Save as draft').click();
+    http.expectOne('/api/users/me/products').flush({ ...product, statusCode: 'INACTIVE' });
+    expect(form.pristine).toBe(true);
+  });
+
+  it('cancels pending draft creation on destruction and releases only its own loader', () => {
+    const { fixture, input, button } = setup();
+    input('title', 'Notebook'); input('price', '12.50'); input('stock', '3');
+    fixture.detectChanges();
+    const loader = TestBed.inject(BlockingLoaderService);
+    const releaseOther = loader.show();
+    button('Save as draft').click();
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/users/me/products');
+    fixture.destroy();
+    expect(request.cancelled).toBe(true);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+    expect(loader.visible()).toBe(true);
+    releaseOther(); expect(loader.visible()).toBe(false);
+  });
+
+  it('excludes the draft action and blocks its handler in edit mode', () => {
+    const { fixture, element, input } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
+    input('title', 'Changed'); fixture.detectChanges();
+    expect(element.textContent).not.toContain('Save as draft');
+    fixture.componentInstance['saveAsDraft']();
+    http.expectNone(() => true);
+  });
+
   it('prevents duplicates and preserves failed values for retry', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const { fixture, input, submit, form, button } = setup();
@@ -704,7 +812,7 @@ describe('Product form', () => {
     expect(loader.visible()).toBe(false);
   });
 
-  it.each(['create', 'edit'])('fetches exactly one fresh server page when returning after %s', async mode => {
+  it.each(['create', 'edit', 'draft'])('fetches exactly one fresh server page when returning after %s', async mode => {
     TestBed.inject(SessionService).establish({ accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
     const http = TestBed.inject(HttpTestingController);
     const harness = await RouterTestingHarness.create('/app/products');
@@ -718,8 +826,13 @@ describe('Product form', () => {
       input.value = value;
       input.dispatchEvent(new Event('input'));
     }
-    element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    const created = { id: 1, title: 'Fresh notebook', price: 12.5, description: '', stock: 3, statusCode: 'ACTIVE' };
+    if (mode === 'draft') {
+      harness.detectChanges();
+      Array.from(element.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Save as draft')!.click();
+    } else {
+      element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }
+    const created = { id: 1, title: 'Fresh notebook', price: 12.5, description: '', stock: 3, statusCode: mode === 'draft' ? 'INACTIVE' : 'ACTIVE' };
     const saved = http.expectOne(mode === 'edit' ? '/api/users/me/products/42' : '/api/users/me/products');
     expect(saved.request.method).toBe(mode === 'edit' ? 'PUT' : 'POST');
     const notifications = harness.routeDebugElement!.injector.get(NotificationService);
@@ -734,7 +847,7 @@ describe('Product form', () => {
     const notification = harness.routeNativeElement?.querySelector('[aria-label="Notification"]');
     expect(notification?.getAttribute('data-status')).toBe('success');
     expect(notification?.textContent).toContain(mode === 'edit'
-      ? 'Product updated successfully.' : 'Product created successfully.');
+      ? 'Product updated successfully.' : mode === 'draft' ? 'Product saved as draft.' : 'Product created successfully.');
     http.expectNone(() => true);
   });
 
