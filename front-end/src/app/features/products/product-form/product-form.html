@@ -27,6 +27,9 @@
       <app-button [label]="mode() === 'edit' ? 'Save changes' : 'Create product'" status="success" variant="ghost" type="submit"
         [disabled]="!canSubmit()" />
       <app-button label="Cancel" status="error" variant="ghost" (pressed)="cancel()" />
+      @if (mode() === 'edit' && productLoaded()) {
+        <app-button label="Delete product" status="error" type="button" [disabled]="!canDelete()" (pressed)="requestDeletion()" />
+      }
     </div>
   </form>
   <app-modal [open]="cancelConfirmationOpen()" title="Leave this page?" (closed)="keepEditing()">
@@ -34,6 +37,13 @@
     <div class="product-form__actions">
       <app-button label="Keep editing" variant="ghost" status="success" type="button" [autofocus]="true" (pressed)="keepEditing()" />
       <app-button label="Leave without saving" type="button" status="error" (pressed)="leaveWithoutSaving()" />
+    </div>
+  </app-modal>
+  <app-modal [open]="deleteConfirmationOpen()" title="Delete product?" (closed)="keepProduct()">
+    <p class="product-form__modal-text">This product will no longer appear in your products or the public catalog. Any unsaved changes will be discarded.</p>
+    <div class="product-form__actions">
+      <app-button label="Keep product" variant="ghost" status="success" type="button" [autofocus]="true" (pressed)="keepProduct()" />
+      <app-button label="Delete product" status="error" type="button" [disabled]="!canDelete()" (pressed)="confirmDeletion()" />
     </div>
   </app-modal>
 </section>

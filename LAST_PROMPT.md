@@ -1,25 +1,38 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T18:41:22-06:00
+Recorded at: 2026-10-20T18:45:14-06:00
 
 Task prompt:
-Add soft-delete support to the existing frontend ProductsService.
+Implement product deletion in the existing ProductForm edit flow.
 
 Follow AGENTS.md and all applicable task prerequisites. Limit application changes to front-end/.
 
-Requirements:
-- Add a method such as deleteById(id).
-- Send DELETE /api/users/me/products/{id} through the existing proxy.
-- Use the existing product ID type and validation conventions.
-- Do not send a request body, owner ID, or status value.
-- Rely on the existing interceptor for bearer authentication.
-- Handle the backend's 204 No Content response using Observable<void>.
-- Return the Observable without subscribing inside the service.
-- Preserve HTTP errors for the caller and keep existing authentication handling unchanged.
-- Preserve all existing product service operations.
+Button and confirmation:
+- Show "Delete product" only in edit mode after the product loads.
+- Use AppButton with status="error" and type="button".
+- Allow deletion independently of form validity, but prevent concurrent write requests.
+- Open the existing AppModal before deleting.
+- Title: "Delete product?"
+- Message: "This product will no longer appear in your products or the public catalog. Any unsaved changes will be discarded."
+- Provide "Keep product" and "Delete product" buttons.
+- Focus "Keep product" initially.
+- Escape, closing the modal, or choosing "Keep product" must preserve edits without calling the API or showing a notification.
 
-Do not connect buttons, add confirmation dialogs, notifications, loaders, navigation, or backend changes.
+Confirmed deletion:
+- Close the modal, show the existing blocking loader, and call ProductsService.deleteById() using the validated route ID.
+- Prevent duplicate submissions.
+- Release the loader and pending state on success, failure, or cancellation.
 
-Add focused HTTP tests covering the DELETE method and URL, absence of a body, successful empty response, invalid IDs, and error propagation.
+Use the existing AppLayout notification service and app-notification component:
+- On confirmed success, publish status="success":
+  "Product deleted successfully."
+- Mark the form pristine, navigate to /app/products, and fetch a fresh listing. Keep the notification visible across navigation.
+- On API failure, publish status="error":
+  "Unable to delete the product. Please try again."
+- Stay on the form, preserve edits, and allow retry.
+- Preserve existing authentication-expiry handling.
+- Never show success before the backend confirms deletion or expose raw server errors.
 
-Run relevant frontend tests and the Angular build. Report results and provide a minimal service usage example.
+Preserve create, update, and Cancel behavior. Do not change the backend or create another notification system.
+
+Test confirmation, success/error notifications, navigation, duplicate prevention, and loader cleanup. Run relevant frontend tests and the Angular build, then report results.

@@ -63,6 +63,126 @@ describe('Product form', () => {
 
   const product = { id: 42, title: 'Notebook', price: 12.345, description: null, stock: 3, statusCode: 'ACTIVE' };
 
+  it.each(['Keep product', 'Escape', 'Close dialog'])('preserves edits and stays silent on deletion dismissal via %s', dismissal => {
+    const { fixture, element, input, form, button } = editSetup('42');
+    expect(Array.from(element.querySelectorAll('form button')).some(b => b.textContent?.trim() === 'Delete product')).toBe(false);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush(product);
+    input('title', '');
+    fixture.detectChanges();
+    const values = form.getRawValue();
+    const trigger = button('Delete product');
+    expect(trigger.type).toBe('button');
+    expect(trigger.classList.contains('app-button--error')).toBe(true);
+    expect(trigger.disabled).toBe(false);
+    trigger.focus(); trigger.click(); fixture.detectChanges();
+    const dialog = element.querySelector<HTMLDialogElement>('dialog[open]')!;
+    expect(dialog.querySelector('h2')?.textContent).toBe('Delete product?');
+    expect(dialog.textContent).toContain('This product will no longer appear in your products or the public catalog. Any unsaved changes will be discarded.');
+    expect(document.activeElement).toBe(button('Keep product'));
+    if (dismissal === 'Escape') dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+    else if (dismissal === 'Close dialog') dialog.querySelector<HTMLButtonElement>('[aria-label="Close dialog"]')!.click();
+    else button('Keep product').click();
+    fixture.detectChanges();
+    expect(dialog.open).toBe(false);
+    expect(form.getRawValue()).toEqual(values);
+    expect(form.dirty).toBe(true);
+    expect(TestBed.inject(NotificationService).current()).toBeNull();
+    http.expectNone(() => true);
+  });
+
+  it('confirms deletion with the exact route ID, blocks all duplicate writes and cleans up on success', () => {
+    const { fixture, input, form, button, submit, element } = editSetup('9007199254740993');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/9007199254740993').flush(product);
+    input('title', ''); fixture.detectChanges();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    button('Delete product').click(); fixture.detectChanges();
+    submit(); http.expectNone(() => true);
+    fixture.componentInstance['confirmDeletion']();
+    fixture.componentInstance['confirmDeletion']();
+    fixture.componentInstance['requestDeletion'](); submit();
+    fixture.detectChanges();
+    expect(element.querySelector('dialog[open]')).toBeNull();
+    expect(button('Delete product').disabled).toBe(true);
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(true);
+    expect(TestBed.inject(NotificationService).current()).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    const pending = http.expectOne('/api/users/me/products/9007199254740993');
+    expect(pending.request.method).toBe('DELETE');
+    pending.flush(null, { status: 204, statusText: 'No Content' });
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({ status: 'success', message: 'Product deleted successfully.' });
+    expect(form.pristine).toBe(true);
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/app/products']);
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+  });
+
+  it('preserves failed deletion edits, allows retry, and releases its loader on cancellation', () => {
+    const { fixture, input, form, button } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush(product);
+    input('title', 'Keep these edits'); fixture.detectChanges();
+    const values = form.getRawValue();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    button('Delete product').click(); fixture.detectChanges();
+    fixture.componentInstance['confirmDeletion']();
+    http.expectOne('/api/users/me/products/42').flush({ secret: 'server details' }, { status: 500, statusText: 'Failure' });
+    fixture.detectChanges();
+    expect(form.getRawValue()).toEqual(values);
+    expect(form.dirty).toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(NotificationService).current()).toMatchObject({ status: 'error', message: 'Unable to delete the product. Please try again.' });
+    const loader = TestBed.inject(BlockingLoaderService);
+    expect(loader.visible()).toBe(false);
+    expect(button('Delete product').disabled).toBe(false);
+    const releaseOther = loader.show();
+    button('Delete product').click(); fixture.detectChanges();
+    fixture.componentInstance['confirmDeletion']();
+    const pending = http.expectOne('/api/users/me/products/42');
+    fixture.destroy();
+    expect(pending.cancelled).toBe(true);
+    expect(fixture.componentInstance['submitting']()).toBe(false);
+    expect(loader.visible()).toBe(true);
+    releaseOther(); expect(loader.visible()).toBe(false);
+    expect(TestBed.inject(NotificationService).current()?.status).toBe('error');
+  });
+
+  it('keeps deletion unavailable during an update', () => {
+    const { fixture, input, submit, button } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
+    input('title', 'Changed'); submit();
+    expect(button('Delete product').disabled).toBe(true);
+    fixture.componentInstance['requestDeletion']();
+    expect(fixture.componentInstance['deleteConfirmationOpen']()).toBe(false);
+    http.expectOne('/api/users/me/products/42').flush({}, { status: 500, statusText: 'Failure' });
+  });
+
+  it('fetches a fresh listing and retains the layout success notification after deletion', async () => {
+    TestBed.inject(SessionService).establish({ accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
+    const harness = await RouterTestingHarness.create('/app/products/edit/42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush(product);
+    harness.detectChanges();
+    const notifications = harness.routeDebugElement!.injector.get(NotificationService);
+    const element = harness.routeNativeElement!;
+    const trigger = Array.from(element.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Delete product')!;
+    trigger.click(); harness.detectChanges();
+    const dialog = element.querySelector('dialog[open]')!;
+    Array.from(dialog.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Delete product')!.click();
+    http.expectOne('/api/users/me/products/42').flush(null, { status: 204, statusText: 'No Content' });
+    await harness.fixture.whenStable();
+    http.expectOne('/api/users/me/products?page=0&pageSize=20').flush([]);
+    harness.detectChanges();
+    expect(TestBed.inject(Router).url).toBe('/app/products');
+    expect(harness.routeDebugElement!.injector.get(NotificationService)).toBe(notifications);
+    const notification = harness.routeNativeElement?.querySelector('[aria-label="Notification"]');
+    expect(notification?.getAttribute('data-status')).toBe('success');
+    expect(notification?.textContent).toContain('Product deleted successfully.');
+    expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
+  });
+
   it('populates exact text values pristine and untouched, keeping edit submission blocked', () => {
     const { fixture, form, submit, button } = editSetup('42');
     const create = vi.spyOn(TestBed.inject(ProductsService), 'create');

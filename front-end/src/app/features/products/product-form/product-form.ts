@@ -40,7 +40,7 @@ export class ProductForm {
   // Preserve signed 64-bit IDs as text rather than rounding them to a JS number.
   protected readonly productId = signal<string | null>(null);
   protected readonly editError = signal<string | null>(null);
-  private readonly productLoaded = signal(false);
+  protected readonly productLoaded = signal(false);
   protected readonly loading = signal(false);
   protected readonly recoverable = signal(false);
   private readonly reload = new BehaviorSubject(0);
@@ -52,6 +52,7 @@ export class ProductForm {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly submitting = signal(false);
   protected readonly cancelConfirmationOpen = signal(false);
+  protected readonly deleteConfirmationOpen = signal(false);
   protected readonly form = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [nonBlank, Validators.maxLength(50)] }),
     price: new FormControl('', { nonNullable: true, validators: [Validators.required, decimal(2)] }),
@@ -69,6 +70,7 @@ export class ProductForm {
   constructor() {
     combineLatest([this.route.data, this.route.paramMap, this.reload]).pipe(
       switchMap(([data, params]) => {
+        this.deleteConfirmationOpen.set(false);
         const mode = data['mode'] === 'edit' ? 'edit' : 'create';
         this.mode.set(mode);
         this.productLoaded.set(false);
@@ -121,8 +123,45 @@ export class ProductForm {
     if (this.recoverable() && !this.loading()) this.reload.next(this.reload.value + 1);
   }
 
+  protected canDelete(): boolean {
+    return this.mode() === 'edit' && this.productLoaded() && !this.loading()
+      && this.productId() !== null && !this.submitting();
+  }
+
+  protected requestDeletion(): void {
+    if (this.canDelete()) this.deleteConfirmationOpen.set(true);
+  }
+
+  protected keepProduct(): void {
+    this.deleteConfirmationOpen.set(false);
+  }
+
+  protected confirmDeletion(): void {
+    if (!this.deleteConfirmationOpen() || !this.canDelete()) return;
+    const id = this.productId()!;
+    this.deleteConfirmationOpen.set(false);
+    this.submitting.set(true);
+    const releaseLoader = this.loader.show();
+    defer(() => this.service.deleteById(id)).pipe(
+      finalize(() => {
+        releaseLoader();
+        this.submitting.set(false);
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: () => {
+        this.form.markAsPristine();
+        this.notifications.publish({ status: 'success', message: 'Product deleted successfully.' });
+        void this.router.navigate(['/app/products']);
+      },
+      error: () => this.notifications.publish({
+        status: 'error', message: 'Unable to delete the product. Please try again.',
+      }),
+    });
+  }
+
   protected canSubmit(): boolean {
-    return !this.submitting() && !this.form.pending && this.form.valid
+    return !this.submitting() && !this.deleteConfirmationOpen() && !this.form.pending && this.form.valid
       && (this.mode() === 'create' || (this.productLoaded() && !this.loading()
         && this.productId() !== null && this.form.dirty));
   }
@@ -130,7 +169,7 @@ export class ProductForm {
   protected submit(): void {
     const editing = this.mode() === 'edit';
     const id = this.productId();
-    if (this.submitting() || (editing && (!this.productLoaded() || this.loading()
+    if (this.submitting() || this.deleteConfirmationOpen() || (editing && (!this.productLoaded() || this.loading()
       || id === null || this.form.pristine))) return;
     this.form.markAllAsTouched();
     if (this.form.pending) return;
