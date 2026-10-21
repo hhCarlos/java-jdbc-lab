@@ -82,6 +82,17 @@ describe('ProductsService', () => {
     expect(await promise).toEqual(response);
   });
 
+  it.each([true, false, null, undefined])('serializes PUT publication choice %j and returns authoritative status', async active => {
+    const promise = firstValueFrom(service.update('42', { title: 'Book', price: 1, stock: 0, active }));
+    const pending = http.expectOne(`${endpoint}/42`);
+    expect(pending.request.body).toEqual({ title: 'Book', price: 1, stock: 0,
+      ...(active === undefined ? {} : { active }) });
+    const response: OwnedProduct = { id: 42, title: 'Book', price: 1, stock: 0,
+      description: null, statusCode: 'INACTIVE' };
+    pending.flush(response);
+    expect(await promise).toEqual(response);
+  });
+
   it.each([0, 400, 401, 404, 500])('preserves update errors %s and authentication expiry', async status => {
     const result = firstValueFrom(service.update('42', { title: 'Book', price: 12.345, stock: 1.5 }))
       .catch((error: unknown) => error);
@@ -127,7 +138,7 @@ describe('ProductsService', () => {
   it('POSTs lazily with only editable fields, interceptor auth, and returns the created product', async () => {
     const input = {
       title: 'Book', price: 9999999999.99, stock: 9999999999, description: 'Details',
-      ownerUserId: 999, statusCode: 'DELETED',
+      ownerUserId: 999, statusCode: 'DELETED', active: false, suspended: true,
     };
     const result = service.create(input);
     http.expectNone(endpoint);

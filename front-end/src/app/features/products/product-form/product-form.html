@@ -23,6 +23,19 @@
     </div>
     <app-input label="Stock" inputId="product-stock" formControlName="stock"
       inputMode="numeric" [errorMessages]="stockErrors" />
+    @if (mode() === 'edit' && productLoaded()) {
+      <div class="product-form__publication">
+        <input class="product-form__checkbox" type="checkbox" id="product-suspended"
+          formControlName="suspended" aria-describedby="product-suspended-description product-suspended-stock"
+          [attr.disabled]="submitting() ? '' : null" />
+        <div class="product-form__publication-content">
+          <label class="product-form__label" for="product-suspended">Suspend Product</label>
+          <p class="product-form__publication-description" id="product-suspended-description">Suspend this product to hide it from the public catalog.</p>
+          <p class="product-form__publication-note" id="product-suspended-stock">Zero-stock products remain inactive even when suspension is unchecked.</p>
+        </div>
+        <app-icon class="product-form__information-icon" name="information" />
+      </div>
+    }
     <div class="product-form__actions">
       <app-button [label]="mode() === 'edit' ? 'Save changes' : 'Create product'" status="success" variant="ghost" type="submit"
         [disabled]="!canSubmit()" />

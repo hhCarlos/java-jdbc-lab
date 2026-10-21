@@ -29,9 +29,10 @@ export class ProductsService {
   }
 
   /** Replaces editable fields; authentication and HTTP errors stay in the HTTP pipeline. */
-  update(id: string, { title, price, description, stock }: UpdateProductRequest): Observable<OwnedProduct> {
+  update(id: string, { title, price, description, stock, active }: UpdateProductRequest): Observable<OwnedProduct> {
     const body: UpdateProductRequest = { title, price, stock };
     if (description !== undefined) body.description = description;
+    if (active !== undefined) body.active = active;
     return this.http.put<OwnedProduct>(`/api/users/me/products/${encodeURIComponent(id)}`, body);
   }
 

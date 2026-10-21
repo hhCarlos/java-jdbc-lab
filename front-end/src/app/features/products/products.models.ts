@@ -22,7 +22,10 @@ export interface CreateProductRequest {
 }
 
 /** Replacement fields; omitted or null description clears the existing description. */
-export interface UpdateProductRequest extends CreateProductRequest {}
+export interface UpdateProductRequest extends CreateProductRequest {
+  /** Publication choice; zero stock always forces INACTIVE. Omitted/null preserves status with positive stock. */
+  active?: boolean | null;
+}
 
 /** Request pagination only: the endpoint returns an array without total counts. */
 export interface ProductPagination {

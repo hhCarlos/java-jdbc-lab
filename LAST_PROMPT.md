@@ -1,40 +1,41 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T18:58:55-06:00
+Recorded at: 2026-10-20T19:09:11-06:00
 
 Task prompt:
 
-Extend the backend product-update operation to support owner-controlled publication through an optional Boolean active field.
+Add a publication-control field to the existing ProductForm edit flow.
 
-Follow AGENTS.md and all applicable database rules.
+Follow AGENTS.md and all applicable task prerequisites. Limit application changes to front-end/.
 
-Endpoint:
-PUT /users/me/products/{id}
+UI:
+- Show the field only in edit mode after product loading succeeds.
+- Make it span the full available form width, including across grid columns.
+- Use a contrasting information panel with a subtle blue background and border.
+- Include a native checkbox, an information AppIcon, and these English texts:
+  - Title: "Suspend Product"
+  - Subtitle: "Suspend this product to hide it from the public catalog."
+- Associate the checkbox accessibly with its label and description.
+- Use BEM, existing spacing tokens, and responsive styling.
 
-Business rules:
-- Stock zero always results in INACTIVE, regardless of active.
-- With positive stock:
-  - active=false results in INACTIVE.
-  - active=true results in ACTIVE.
-  - active omitted or null preserves the current publication status.
-- DELETED products remain unavailable and cannot be restored through PUT.
-- Changing stock alone must not reactivate an inactive product.
+Information styling:
+- Reuse existing information-status tokens and icon if available.
+- Otherwise, add an information icon to the existing sprite/registry and semantic information tokens.
+- Use hsl(212 60% 48%) as the base blue direction, adjusting theme-specific colors for contrast.
+- Keep text readable using normal theme text colors; color the icon with the information token.
+- Preserve AppIcon's inherited-color behavior.
 
-Implementation:
-- Extend the update request and application/domain logic.
-- Keep existing required fields and validation unchanged.
-- Obtain ownership from authentication.
-- Do not accept raw status IDs, status codes, or owner IDs as writable fields.
-- Reuse the repository's existing target-status-code update capability.
-- Save editable fields and the resulting status atomically.
-- Update all affected service signatures and the TransactionalProductService override so transaction handling remains effective.
-- Preserve the response structure and return the resulting authoritative status.
-- Preserve existing 400, 401, and 404 handling.
-- Do not add a database column or change the status lookup table.
-- Keep POST creation behavior unchanged.
+Form and API:
+- Add a boolean suspended control.
+- Initialize it from the loaded product status: INACTIVE means checked; ACTIVE means unchecked.
+- Initial population must leave the form pristine.
+- Map suspended to active: !suspended in the PUT request.
+- Extend the typed update request accordingly, without adding this field to POST creation.
+- Toggling the checkbox must participate in dirty tracking, submission eligibility, and Cancel confirmation.
+- Preserve validation, loader behavior, notifications, and create/update/delete flows.
+- Explain that zero-stock products remain inactive even when suspension is unchecked.
+- Use the backend response as the authoritative resulting status.
 
-Update OpenAPI and business-rule documentation to explain active, stock precedence, and backward-compatible omission behavior.
+Do not add backend changes, dependencies, or another shared form-control component.
 
-Test suspension, explicit reactivation, zero-stock precedence, omitted/null active, ownership isolation, and deleted-product protection. Preserve existing update tests.
-
-Run relevant backend tests and report results with example PUT payloads. Do not modify front-end/.
+Test initialization, checkbox-to-payload mapping, dirty tracking, and create-mode isolation. Run relevant frontend tests and the Angular build, then report results.

@@ -9,6 +9,7 @@ export const ICON_REGISTRY = {
   success: 'success',
   error: 'error',
   warning: 'warning',
+  information: 'information',
   loader: 'loader',
 } as const satisfies Readonly<Record<string, string>>;
 

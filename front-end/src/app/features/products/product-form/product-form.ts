@@ -2,11 +2,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, EMPTY, catchError, combineLatest, defer, finalize, switchMap, tap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BlockingLoaderService } from '../../../shared/blocking-loader/blocking-loader.service';
-import { CreateProductRequest, UpdateProductRequest } from '../products.models';
+import { CreateProductRequest } from '../products.models';
 import { ProductsService } from '../products.service';
 import { Component, DestroyRef, ElementRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AppIcon } from '../../../shared/app-icon/app-icon';
 import { AppInput } from '../../../shared/app-input/app-input';
 import { AppModal } from '../../../shared/app-modal/app-modal';
 import { AppButton } from '../../../shared/app-button/app-button';
@@ -26,11 +27,11 @@ const decimal = (fraction: number): ValidatorFn => control => {
     ? null : { decimal: true };
 };
 
-type Field = 'title' | 'price' | 'description' | 'stock';
+type Field = 'title' | 'price' | 'description' | 'stock' | 'suspended';
 
 @Component({
   selector: 'app-product-form',
-  imports: [ReactiveFormsModule, AppButton, AppInput, AppModal],
+  imports: [ReactiveFormsModule, AppButton, AppInput, AppModal, AppIcon],
   templateUrl: './product-form.html',
   styleUrl: './product-form.scss',
 })
@@ -57,6 +58,7 @@ export class ProductForm {
     title: new FormControl('', { nonNullable: true, validators: [nonBlank, Validators.maxLength(50)] }),
     price: new FormControl('', { nonNullable: true, validators: [Validators.required, decimal(2)] }),
     description: new FormControl('', { nonNullable: true }),
+    suspended: new FormControl(false, { nonNullable: true }),
     stock: new FormControl('', { nonNullable: true, validators: [Validators.required, decimal(0)] }),
   });
 
@@ -98,6 +100,7 @@ export class ProductForm {
               price: String(product.price),
               description: product.description ?? '',
               stock: String(product.stock),
+              suspended: product.statusCode === 'INACTIVE',
             });
             this.form.enable();
             this.productLoaded.set(true);
@@ -180,7 +183,7 @@ export class ProductForm {
       return;
     }
     const values = this.form.getRawValue();
-    const request: CreateProductRequest | UpdateProductRequest = {
+    const request: CreateProductRequest = {
       title: values.title,
       price: Number(values.price),
       description: values.description,
@@ -188,14 +191,15 @@ export class ProductForm {
     };
     this.submitting.set(true);
     const releaseLoader = this.loader.show();
-    defer(() => editing ? this.service.update(id!, request) : this.service.create(request)).pipe(
+    defer(() => editing ? this.service.update(id!, { ...request, active: !values.suspended }) : this.service.create(request)).pipe(
       finalize(() => {
         releaseLoader();
         this.submitting.set(false);
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
-      next: () => {
+      next: product => {
+        if (editing) this.form.controls.suspended.setValue(product.statusCode === 'INACTIVE');
         this.form.markAsPristine();
         this.notifications.publish({
           status: 'success',

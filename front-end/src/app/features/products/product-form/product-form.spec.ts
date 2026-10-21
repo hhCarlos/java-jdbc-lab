@@ -183,6 +183,81 @@ describe('Product form', () => {
     expect(TestBed.inject(BlockingLoaderService).visible()).toBe(false);
   });
 
+  it.each(['ACTIVE', 'INACTIVE'])('initializes suspension from %s only after loading, pristine and accessible', statusCode => {
+    const { fixture, element, form, button } = editSetup('42');
+    expect(element.querySelector('#product-suspended')).toBeNull();
+    TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42')
+      .flush({ ...product, price: 12.34, statusCode });
+    fixture.detectChanges();
+    const checkbox = element.querySelector<HTMLInputElement>('#product-suspended')!;
+    expect(checkbox.type).toBe('checkbox');
+    expect(checkbox.checked).toBe(statusCode === 'INACTIVE');
+    expect(form.controls['suspended'].value).toBe(statusCode === 'INACTIVE');
+    expect(form.pristine).toBe(true);
+    expect(button('Save changes').disabled).toBe(true);
+    expect(element.querySelector('label[for="product-suspended"]')?.textContent).toBe('Suspend Product');
+    expect(checkbox.getAttribute('aria-describedby')).toBe('product-suspended-description product-suspended-stock');
+    expect(element.querySelector('#product-suspended-description')?.textContent)
+      .toBe('Suspend this product to hide it from the public catalog.');
+    expect(element.querySelector('#product-suspended-stock')?.textContent).toContain('Zero-stock products remain inactive');
+    expect(element.querySelector('.product-form__information-icon use')?.getAttribute('href'))
+      .toBe('icons/sprite.svg#information');
+  });
+
+  it.each(['ACTIVE', 'INACTIVE'])('tracks checkbox edits and maps %s suspension to PUT active', statusCode => {
+    const { fixture, element, form, button, submit } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34, statusCode });
+    fixture.detectChanges();
+    const checkbox = element.querySelector<HTMLInputElement>('#product-suspended')!;
+    checkbox.click(); fixture.detectChanges();
+    expect(form.dirty).toBe(true);
+    expect(form.controls['suspended'].dirty).toBe(true);
+    expect(button('Save changes').disabled).toBe(false);
+    button('Cancel').click(); fixture.detectChanges();
+    expect(fixture.componentInstance['cancelConfirmationOpen']()).toBe(true);
+    button('Keep editing').click(); fixture.detectChanges();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    submit();
+    const pending = http.expectOne('/api/users/me/products/42');
+    expect(pending.request.method).toBe('PUT');
+    expect(pending.request.body).toEqual({ title: product.title, price: 12.34,
+      description: '', stock: 3, active: !checkbox.checked });
+    pending.flush({ ...product, price: 12.34, statusCode: 'INACTIVE' });
+    fixture.detectChanges();
+    expect(checkbox.checked).toBe(true);
+    expect(form.pristine).toBe(true);
+  });
+
+  it('keeps the backend zero-stock status authoritative after requesting publication', () => {
+    const { fixture, element, form, submit } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34, stock: 0, statusCode: 'INACTIVE' });
+    fixture.detectChanges();
+    element.querySelector<HTMLInputElement>('#product-suspended')!.click();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    submit();
+    const pending = http.expectOne('/api/users/me/products/42');
+    expect(pending.request.body.active).toBe(true);
+    expect(pending.request.body.stock).toBe(0);
+    pending.flush({ ...product, price: 12.34, stock: 0, statusCode: 'INACTIVE' });
+    expect(form.controls['suspended'].value).toBe(true);
+    expect(form.pristine).toBe(true);
+  });
+
+  it('hides publication controls and excludes them from POST even if set programmatically', () => {
+    const { element, input, form, submit } = setup();
+    expect(element.querySelector('#product-suspended')).toBeNull();
+    form.controls['suspended'].setValue(true);
+    input('title', 'Created'); input('price', '1'); input('stock', '3');
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    submit();
+    const pending = TestBed.inject(HttpTestingController).expectOne('/api/users/me/products');
+    expect(pending.request.method).toBe('POST');
+    expect(pending.request.body).toEqual({ title: 'Created', price: 1, stock: 3, description: '' });
+    pending.flush({ ...product, statusCode: 'ACTIVE' });
+  });
+
   it('populates exact text values pristine and untouched, keeping edit submission blocked', () => {
     const { fixture, form, submit, button } = editSetup('42');
     const create = vi.spyOn(TestBed.inject(ProductsService), 'create');
@@ -190,7 +265,7 @@ describe('Product form', () => {
     expect(fixture.componentInstance['loading']()).toBe(true);
     TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush(product);
     fixture.detectChanges();
-    expect(form.getRawValue()).toEqual({ title: 'Notebook', price: '12.345', description: '', stock: '3' });
+    expect(form.getRawValue()).toEqual({ title: 'Notebook', price: '12.345', description: '', stock: '3', suspended: false });
     expect(form.pristine).toBe(true);
     expect(form.untouched).toBe(true);
     expect(form.enabled).toBe(true);
@@ -239,7 +314,7 @@ describe('Product form', () => {
     expect(button('Save changes').disabled).toBe(true);
     const request = http.expectOne('/api/users/me/products/9007199254740993');
     expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({ title: 'Notebook', price: 12.5, description: '', stock: 3 });
+    expect(request.request.body).toEqual({ title: 'Notebook', price: 12.5, description: '', stock: 3, active: true });
     expect(TestBed.inject(NotificationService).current()).toBeNull();
     request.flush({ ...product, price: 12.5 });
     expect(TestBed.inject(NotificationService).current()).toMatchObject({
@@ -347,7 +422,7 @@ describe('Product form', () => {
     expect(form.enabled).toBe(true);
     // Even bypassing disabled controls must never turn edit submission into creation.
     form.enable();
-    form.setValue({ title: 'Valid', price: '1', description: '', stock: '1' });
+    form.setValue({ title: 'Valid', price: '1', description: '', stock: '1', suspended: false });
     submit();
     fixture.componentInstance['submit']();
     expect(create).not.toHaveBeenCalled();

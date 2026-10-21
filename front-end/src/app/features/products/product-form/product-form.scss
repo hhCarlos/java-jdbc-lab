@@ -10,6 +10,32 @@
   &__instructions, &__form { margin-top: var(--space-4); }
   &__form, &__field { display: grid; gap: var(--space-2); }
   &__form { gap: var(--space-6); }
+  &__publication {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-4);
+    border: 1px solid var(--color-information-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-information-background);
+    color: var(--color-text);
+  }
+  &__publication-content { min-width: 0; overflow-wrap: anywhere; }
+  &__publication-description, &__publication-note {
+    margin: var(--space-2) 0 0;
+    color: var(--color-text);
+  }
+  &__publication-note { color: var(--color-text-muted); }
+  &__checkbox {
+    margin: var(--space-1) 0 0;
+    accent-color: var(--color-information-indicator);
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+  &__information-icon { color: var(--color-information-indicator); }
+
   &__label { font-weight: var(--font-weight-medium); }
   &__input {
     width: 100%;
@@ -23,6 +49,7 @@
 
   @include styles.respond(md) {
     &__form { margin-top: var(--space-6); }
+    &__publication { padding: var(--space-6); gap: var(--space-4); }
   }
 
   max-width: 40rem;
