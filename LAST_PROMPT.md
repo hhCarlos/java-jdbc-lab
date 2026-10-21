@@ -1,31 +1,26 @@
 Author: Carlos Enrique
 Role: Developer
-Recorded at: 2026-10-20T19:15:14-06:00
+Recorded at: 2026-10-20T19:20:49-06:00
 
 Task prompt:
 
-Fix the Suspend Product control in the frontend product-edit form.
+Verify and complete publication-intent handling in ProductForm edit mode.
 
 Follow AGENTS.md and all applicable task prerequisites.
 
-Behavior:
-- When stock is zero, show Suspend Product checked and disabled.
-- Explain: "Add stock before reactivating this product."
-- When stock becomes a valid positive integer, enable the checkbox, provided no request is pending.
-- Do not automatically uncheck it when stock increases; reactivation requires an explicit user choice.
-- Keep it disabled while stock is empty or invalid.
-- If stock changes from positive to zero, check and disable suspension immediately.
+Reuse the existing suspended checkbox; do not add another field.
 
-Implementation:
-- Manage disabled state through the existing reactive form control.
-- Preserve the suspension value when building the PUT payload; disabled controls are omitted from form.value, so use an appropriate approach such as getRawValue().
-- With zero stock, send active=false.
-- Initial loading and derived control-state updates must not make an untouched form dirty.
-- Avoid recursive value-change subscriptions.
-- Preserve existing submission, loading, notifications, and cancellation behavior.
+Requirements:
+- Restocking must enable the checkbox without automatically unchecking it.
+- With positive stock and suspension checked, submit active=false.
+- With positive stock and suspension unchecked, submit active=true.
+- With zero stock, keep suspension checked and disabled, and submit active=false.
+- Include the explicit active value in every edit request, even when the suspension control is disabled.
+- Preserve the user's selection while editing other fields.
+- Count an explicit suspension change toward edit submission eligibility.
+- Preserve existing validation, loading, notifications, and Cancel confirmation.
+- Keep create mode unchanged.
 
-Do not modify the backend or create flow.
+Inspect the existing implementation first and change only what is missing.
 
-Test initial zero stock, positive-to-zero changes, re-enabling after restocking, explicit reactivation, pristine initialization, and the submitted payload.
-
-Run relevant frontend tests and the Angular build. Report results.
+Test both restocking scenarios, zero-stock behavior, and a status-only edit with positive stock. Run relevant frontend tests and the Angular build, then report results.

@@ -293,6 +293,35 @@ describe('Product form', () => {
     expect(form.pristine).toBe(true);
   });
 
+  it.each([false, true])('restocks an initially zero-stock product with explicit reactivation=%s', reactivate => {
+    const { fixture, element, form, input, submit, button } = editSetup('42');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34, stock: 0, statusCode: 'INACTIVE' });
+    fixture.detectChanges();
+    const checkbox = element.querySelector<HTMLInputElement>('#product-suspended')!;
+    expect(checkbox.checked).toBe(true);
+    expect(checkbox.disabled).toBe(true);
+    expect(form.pristine).toBe(true);
+    input('stock', '5'); fixture.detectChanges();
+    expect(checkbox.disabled).toBe(false);
+    expect(checkbox.checked).toBe(true);
+    if (reactivate) checkbox.click();
+    input('title', 'Restocked notebook');
+    input('price', '15.50');
+    input('description', 'Updated details');
+    input('stock', '6'); fixture.detectChanges();
+    expect(checkbox.checked).toBe(!reactivate);
+    expect(button('Save changes').disabled).toBe(false);
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    submit();
+    const pending = http.expectOne('/api/users/me/products/42');
+    expect(pending.request.method).toBe('PUT');
+    expect(pending.request.body).toEqual({ title: 'Restocked notebook', price: 15.5,
+      description: 'Updated details', stock: 6, active: reactivate });
+    pending.flush({ ...product, price: 15.5, stock: 6, statusCode: reactivate ? 'ACTIVE' : 'INACTIVE' });
+    expect(form.pristine).toBe(true);
+  });
+
   it.each(['', '-1', '1.5', '10000000000', 'abc'])('disables suspension for invalid stock %j and preserves its value', stock => {
     const { fixture, element, form, input } = editSetup('42');
     TestBed.inject(HttpTestingController).expectOne('/api/users/me/products/42').flush({ ...product, price: 12.34 });
